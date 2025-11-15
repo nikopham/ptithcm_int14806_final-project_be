@@ -1,13 +1,16 @@
 package com.ptithcm.movie.auth.security;
 
-import com.ptithcm.movie.user.entity.User;
-import lombok.AllArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import com.ptithcm.movie.user.entity.User;
+
+import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class UserPrincipal implements UserDetails {
@@ -16,9 +19,13 @@ public class UserPrincipal implements UserDetails {
 
     public UUID getId() { return user.getId(); }
 
+    public User getUser() {
+        return user;
+    }
+
     @Override public Collection<? extends GrantedAuthority> getAuthorities() {
-        // nếu có role/permission thì map ở đây, tạm thời trả List.of()
-        return List.of();
+        return List.of(new SimpleGrantedAuthority("ROLE_" +
+                         user.getRole().getCode().toUpperCase()));
     }
     @Override public String getPassword() { return user.getPasswordHash(); }
     @Override public String getUsername() { return user.getEmail(); }

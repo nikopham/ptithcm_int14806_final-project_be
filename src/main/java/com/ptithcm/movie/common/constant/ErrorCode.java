@@ -9,6 +9,8 @@ public final class ErrorCode {
     public static final int UNAUTHORIZED         = 1001;
     public static final int FORBIDDEN            = 1003;
     public static final int TOKEN_EXPIRED        = 1004;
+    public static final int RESET_TOO_MANY       = 3001;
+    public static final int RESET_TOKEN_INVALID  = 3002;
 
     /* ===== lỗi người dùng ===== */
     public static final int EMAIL_EXISTS         = 2001;

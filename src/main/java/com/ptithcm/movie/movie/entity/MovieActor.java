@@ -30,10 +30,7 @@ public class MovieActor {
   private Movie movie;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @MapsId("actorId")
-  @JoinColumn(name = "actor_id")
-  private Actor actor;
-
-  @Column(length = 128)
-  private String character;
+  @MapsId("personId")
+  @JoinColumn(name = "person_id")
+  private Person person;
 }

@@ -1,4 +1,5 @@
 package com.ptithcm.movie.movie.entity;
+import java.io.Serializable;
 import java.util.UUID;
 
 import jakarta.persistence.Embeddable;
@@ -12,7 +13,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class MovieGenreKey implements java.io.Serializable {
+public class MovieGenreKey implements Serializable {
   private UUID movieId;
   private Integer genreId;
 }

@@ -3,12 +3,16 @@ package com.ptithcm.movie.config;
 import com.ptithcm.movie.auth.jwt.JwtAuthFilter;
 import com.ptithcm.movie.auth.jwt.JwtTokenProvider;
 import com.ptithcm.movie.auth.security.CustomOAuth2SuccessHandler;
+import com.ptithcm.movie.common.constant.GlobalConstant;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,6 +38,7 @@ import java.util.List;
 @EnableMethodSecurity
 @EnableRedisHttpSession
 @RequiredArgsConstructor
+@ComponentScan("com.ptithcm.movie")
 public class SecurityConfig {
 
     private final JwtTokenProvider jwt;
@@ -68,8 +73,26 @@ public class SecurityConfig {
                 .sessionManagement(s -> s
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Auth & docs  → public
+                        .requestMatchers("/api/auth/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/users/me").hasAnyAuthority(GlobalConstant.ROLE_VIEWER,
+                                GlobalConstant.ROLE_SUPER_ADMIN, GlobalConstant.ROLE_MOVIE_ADMIN, GlobalConstant.COMMENT_ADMIN)
+                        // TMDB API
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/external/tmdb/**").hasAnyAuthority(GlobalConstant.ROLE_MOVIE_ADMIN,
+                                GlobalConstant.ROLE_SUPER_ADMIN)
                         .anyRequest().authenticated())
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint((req, res, ex) -> {
+                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            res.setContentType("application/json;charset=UTF-8");
+                            res.getWriter().write("""
+                        {"success":false,"code":401,"message":"Unauthorized – missing or invalid token"}
+                        """);
+                        }))
                 /* Google OAuth2 */
                 .oauth2Login(o -> o.successHandler(oAuth2SuccessHandler))
                 /* add JWT filter */

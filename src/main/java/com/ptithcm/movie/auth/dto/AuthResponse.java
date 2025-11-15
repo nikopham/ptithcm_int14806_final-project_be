@@ -1,3 +1,5 @@
 package com.ptithcm.movie.auth.dto;
 
-public record AuthResponse(String accessToken) {}
+import java.util.List;
+
+public record AuthResponse(String accessToken, String username, String avatarUrl, List<String> roles) {}

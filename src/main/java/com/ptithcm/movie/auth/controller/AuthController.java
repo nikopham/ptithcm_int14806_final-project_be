@@ -1,7 +1,9 @@
 package com.ptithcm.movie.auth.controller;
 
+import com.ptithcm.movie.auth.dto.ForgotPasswordRequest;
 import com.ptithcm.movie.auth.dto.LoginRequest;
 import com.ptithcm.movie.auth.dto.RegisterRequest;
+import com.ptithcm.movie.auth.dto.ResetPasswordRequest;
 import com.ptithcm.movie.auth.service.AuthService;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,5 +56,23 @@ public class AuthController {
                                 HttpServletResponse response) {
 
         return authService.logout(refreshToken, response);
+    }
+
+    /* POST /api/auth/forgot-password */
+    @PostMapping("/forgot-password")
+    public ServiceResult forgot(@RequestBody ForgotPasswordRequest req) {
+        return authService.forgotPassword(req, baseUrl);
+    }
+
+    /* GET  /api/auth/reset/verify?token=xxx */
+    @GetMapping("/reset/verify")
+    public ServiceResult verifyReset(@RequestParam String token) {
+        return authService.verifyResetToken(token);
+    }
+
+    /* POST /api/auth/reset */
+    @PostMapping("/reset")
+    public ServiceResult reset(@RequestBody ResetPasswordRequest req) {
+        return authService.resetPassword(req);
     }
 }

@@ -29,7 +29,7 @@ public class MovieDirector {
   private Movie movie;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @MapsId("directorId")
-  @JoinColumn(name = "director_id")
-  private Director director;
+  @MapsId("personId")
+  @JoinColumn(name = "person_id")
+  private Person person;
 }

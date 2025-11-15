@@ -15,5 +15,5 @@ import lombok.Setter;
 @AllArgsConstructor
 public class MovieDirectorKey implements java.io.Serializable {
   private UUID movieId;
-  private UUID directorId;
+  private UUID personId;
 }

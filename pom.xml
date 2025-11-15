@@ -141,6 +141,12 @@
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>2.8.14</version>  <!-- nhánh 2.8.x tương thích Spring Boot 3.5.x --> 
 		</dependency>
+
+        <!-- reactive WebClient -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
 		
 	</dependencies>
 

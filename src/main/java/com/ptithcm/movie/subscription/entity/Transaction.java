@@ -45,7 +45,7 @@ public class Transaction {
     @Column(precision = 12, scale = 2, nullable = false)
     private BigDecimal amount;
 
-    @Column(length = 3, nullable = false)
+    @Column
     private String currency;
 
     @Enumerated(EnumType.STRING)

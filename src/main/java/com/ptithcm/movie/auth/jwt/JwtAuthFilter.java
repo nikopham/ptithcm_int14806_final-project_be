@@ -35,6 +35,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = req.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith("Bearer ")) {
             try {
+                logger.info(header.substring(7));
                 DecodedJWT jwt = provider.verify(header.substring(7));
                 String email  = jwt.getSubject();
 
@@ -45,7 +46,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(auth);
 
             } catch (JWTVerificationException ex) {
-                // optional: log hoặc set 401
+                SecurityContextHolder.clearContext();
+                logger.debug(ex.getMessage());
             }
         }
         chain.doFilter(req, res);

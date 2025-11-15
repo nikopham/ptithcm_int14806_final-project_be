@@ -1,10 +1,12 @@
 package com.ptithcm.movie.movie.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.ptithcm.movie.common.constant.VideoQuality;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
@@ -65,9 +67,40 @@ public class Movie {
     @Column(name = "is_series")
     private Boolean series;
 
+    @Column
+    private Long viewCount = 0L;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 16)
     private ContentStatus status;
+
+    @Column(unique = true)
+    private String slug;
+
+    @Column(unique = true)
+    private Integer tmdbId;
+
+    @Column(unique = true)
+    private Integer imdbId;
+
+    @Column(name = "imdb_score", precision = 3, scale = 1)
+    private BigDecimal imdbScore;
+
+    @Column
+    private String originalTitle;
+
+    @Column
+    private String backdropUrl;
+
+    @Column
+    private String trailerUrl;
+
+    @Column
+    private String videoUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "quality", length = 16)
+    private VideoQuality quality;
 
     @ManyToOne(fetch = FetchType.LAZY)          // created_by
     @JoinColumn(name = "created_by")

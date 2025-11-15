@@ -2,20 +2,24 @@ package com.ptithcm.movie.auth.service;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.ptithcm.movie.auth.dto.AuthResponse;
-import com.ptithcm.movie.auth.dto.LoginRequest;
-import com.ptithcm.movie.auth.dto.RegisterRequest;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.ptithcm.movie.auth.dto.*;
+import com.ptithcm.movie.auth.entity.PasswordResetToken;
 import com.ptithcm.movie.auth.entity.VerificationToken;
 import com.ptithcm.movie.auth.jwt.JwtTokenProvider;
+import com.ptithcm.movie.auth.repository.PasswordResetTokenRepository;
 import com.ptithcm.movie.auth.repository.VerificationTokenRepository;
 import com.ptithcm.movie.auth.security.UserPrincipal;
 import com.ptithcm.movie.auth.session.UserSessionService;
 import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.constant.ErrorMessage;
+import com.ptithcm.movie.common.constant.GlobalConstant;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.config.JwtConfig;
 import com.ptithcm.movie.config.MailConfig;
+import com.ptithcm.movie.user.entity.Role;
 import com.ptithcm.movie.user.entity.User;
+import com.ptithcm.movie.user.repository.RoleRepository;
 import com.ptithcm.movie.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,9 +37,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static com.ptithcm.movie.common.constant.GlobalConstant.RESEND_INTERVAL_SEC;
 
@@ -51,6 +53,74 @@ public class AuthService {
     private final JwtTokenProvider jwtProvider;
     private final JwtConfig jwtConfig;
     private final UserSessionService sessionSvc;
+    private final PasswordResetTokenRepository prRepo;
+    private final MailService mailService;
+    private final RoleRepository roleRepo;
+
+    /* ① yêu cầu reset --------------------------------------------------- */
+    public ServiceResult forgotPassword(ForgotPasswordRequest req, String baseUrl) {
+
+        User user = userRepo.findByEmailIgnoreCase(req.email()).orElse(null);
+        if (user == null)
+            return ServiceResult.Success()
+                    .message("Nếu email tồn tại, chúng tôi đã gửi hướng dẫn.");
+
+        OffsetDateTime now = OffsetDateTime.now();
+        PasswordResetToken pr = prRepo.findByUserId(user.getId()).orElse(null);
+
+        if (pr != null &&
+                now.minusSeconds(GlobalConstant.RESEND_INTERVAL_SEC).isBefore(pr.getCreatedAt())) {
+
+            long wait = GlobalConstant.RESEND_INTERVAL_SEC -
+                    Duration.between(pr.getCreatedAt(), now).getSeconds();
+
+            return ServiceResult.Failure()
+                    .code(ErrorCode.RESET_TOO_MANY)
+                    .message("Vui lòng đợi " + wait + "s rồi thử lại.");
+        }
+
+        if (pr != null) prRepo.delete(pr);
+        pr = prRepo.save(PasswordResetToken.builder()
+                .token(UUID.randomUUID().toString())
+                .user(user)
+                .expiresAt(now.plusHours(2))
+                .build());
+
+        String link = baseUrl + "/api/auth/reset/verify?token=" + pr.getToken();
+        return mailService.sendPasswordReset(user, link);   // trả ServiceResult luôn
+    }
+
+    /* ② verify token ---------------------------------------------------- */
+    public ServiceResult verifyResetToken(String token) {
+        PasswordResetToken pr = prRepo.findByToken(token).orElse(null);
+        if (pr == null || pr.getExpiresAt().isBefore(OffsetDateTime.now()))
+            return ServiceResult.Failure()
+                    .code(ErrorCode.RESET_TOKEN_INVALID)
+                    .message("Token hết hạn hoặc không hợp lệ");
+        return ServiceResult.Success().message("Token hợp lệ");
+    }
+
+    /* ③ lưu mật khẩu mới ------------------------------------------------- */
+    public ServiceResult resetPassword(ResetPasswordRequest req) {
+
+        if (!req.password().equals(req.repassword()))
+            return ServiceResult.Failure()
+                    .code(ErrorCode.BAD_CREDENTIALS)
+                    .message("Password mismatch");
+
+        PasswordResetToken pr = prRepo.findByToken(req.token()).orElse(null);
+        if (pr == null || pr.getExpiresAt().isBefore(OffsetDateTime.now()))
+            return ServiceResult.Failure()
+                    .code(ErrorCode.RESET_TOKEN_INVALID)
+                    .message("Token hết hạn hoặc không hợp lệ");
+
+        User user = pr.getUser();
+        user.setPasswordHash(encoder.encode(req.password()));
+        userRepo.save(user);
+        prRepo.delete(pr);
+
+        return ServiceResult.Success().message("Đặt lại mật khẩu thành công");
+    }
 
     public ServiceResult register(RegisterRequest r, String baseUrl) {
 
@@ -59,6 +129,9 @@ public class AuthService {
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
                     .message("Password mismatch");
+
+        Role viewerRole = roleRepo.findByCode("viewer")
+                .orElseThrow(() -> new IllegalStateException("Role 'viewer' not found."));
 
         Optional<User> opt = userRepo.findByEmailIgnoreCase(r.email());
         User user;
@@ -99,10 +172,13 @@ public class AuthService {
                     .build());
 
             user.setUsername(r.name());
+            user.setActive(true);
             user.setPasswordHash(encoder.encode(r.password()));
+            if (user.getRole() == null) user.setRole(viewerRole);
             userRepo.save(user);
 
-            return sendMailAndReturn(user, vt, baseUrl, "Đã gửi lại link xác nhận");
+            String link = baseUrl + "/api/auth/verify?token=" + vt.getToken();
+            return mailService.sendRegisterVerification(user, link);
 
         } else {
             /* Người dùng mới */
@@ -111,6 +187,8 @@ public class AuthService {
                     .username(r.name())
                     .passwordHash(encoder.encode(r.password()))
                     .emailVerified(false)
+                    .role(viewerRole)
+                    .active(true)
                     .build());
 
             VerificationToken vt = tokenRepo.save(VerificationToken.builder()
@@ -119,29 +197,9 @@ public class AuthService {
                     .expiresAt(OffsetDateTime.now().plusDays(1))
                     .build());
 
-            return sendMailAndReturn(user, vt, baseUrl, "Đã gửi link xác nhận vào email");
+            String link = baseUrl + "/api/auth/verify?token=" + vt.getToken();
+            return mailService.sendRegisterVerification(user, link);
         }
-    }
-
-    /* Helper */
-    private ServiceResult sendMailAndReturn(User user,
-                                            VerificationToken vt,
-                                            String baseUrl,
-                                            String successMsg) {
-
-        String link = baseUrl + "/api/auth/verify?token=" + vt.getToken();
-        try {
-            mailConfig.sendVerification(user.getEmail(), link);
-        } catch (Exception e) {
-//            log.error("Send mail failed", e);
-            return ServiceResult.Failure()
-                    .code(ErrorCode.MAIL_SEND_ERROR)
-                    .message("Không thể gửi email. Vui lòng thử lại sau");
-        }
-
-        return ServiceResult.Success()
-                .code(ErrorCode.SUCCESS)
-                .message(successMsg);
     }
 
     /* ------------ VERIFY E-MAIL ------------ */
@@ -226,9 +284,15 @@ public class AuthService {
                 .sameSite("Lax")
                 .build();
         res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
+        List<String> listRoles = new ArrayList<>();
+        listRoles.add(user.getRole().getCode());
         /* 6. Trả access-token về body */
-        AuthResponse payload = new AuthResponse(accessToken);
+        AuthResponse payload = new AuthResponse(
+                accessToken,
+                user.getUsername(),
+                user.getAvatarUrl(),
+                listRoles
+        );
         return ServiceResult.Success()
                 .code(ErrorCode.SUCCESS)
                 .message("Đăng nhập thành công")
@@ -267,10 +331,17 @@ public class AuthService {
                     .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
                     .sameSite("Lax").build();
             res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
+            List<String> listRoles = new ArrayList<>();
+            listRoles.add(user.getRole().getCode());
+            AuthResponse payload = new AuthResponse(
+                    newAccess,
+                    user.getUsername(),
+                    user.getAvatarUrl(),
+                    listRoles
+            );
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
-                    .data(new AuthResponse(newAccess));
+                    .data(payload);
 
         } catch (JWTVerificationException ex) {
             return ServiceResult.Failure()

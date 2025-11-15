@@ -49,8 +49,11 @@ public class User {
     @Column(name = "password_hash")
     private String passwordHash;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     /* ---------- role ---------- */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
     private Role role;
 
