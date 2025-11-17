@@ -1,10 +1,9 @@
-package com.ptithcm.movie.movie.tmdb;
+package com.ptithcm.movie.external.tmdb;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ptithcm.movie.movie.tmdb.dto.TmdbMovieBrief;
-import com.ptithcm.movie.movie.tmdb.dto.TmdbMovieDetail;
-import lombok.RequiredArgsConstructor;
+import com.ptithcm.movie.external.tmdb.dto.TmdbMovieBrief;
+import com.ptithcm.movie.external.tmdb.dto.TmdbMovieDetail;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;

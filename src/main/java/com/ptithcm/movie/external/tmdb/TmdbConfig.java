@@ -1,4 +1,4 @@
-package com.ptithcm.movie.movie.tmdb;
+package com.ptithcm.movie.external.tmdb;
 
 import lombok.Getter;
 import lombok.Setter;

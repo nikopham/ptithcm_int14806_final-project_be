@@ -1,4 +1,4 @@
-package com.ptithcm.movie.movie.tmdb.dto;
+package com.ptithcm.movie.external.tmdb.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

@@ -10,6 +10,10 @@ server:
 tmdb:
   api-key: 5a7f899bf4a73482bd8b4a85274e9863
   base-url: https://api.themoviedb.org/3
+cloudinary:
+  cloud-name: dgxepmogx
+  api-key: 381235941254148
+  api-secret: -RT1DAMCr8-bdY54nfRBBgD-F4s
 spring:
   devtools:
     restart:

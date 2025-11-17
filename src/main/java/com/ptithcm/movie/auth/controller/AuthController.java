@@ -20,7 +20,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Value("${app.base-url:http://localhost:8080}")
+    @Value("${app.base-url:http://localhost:5173}")
     private String baseUrl;
 
     @PostMapping("/register")
@@ -28,7 +28,7 @@ public class AuthController {
         return authService.register(req, baseUrl);
     }
 
-    @GetMapping("/verify")
+    @GetMapping("/verifyRedirect")
     public RedirectView verify(@RequestParam String token) {
         return authService.verifyRedirect(token);
     }

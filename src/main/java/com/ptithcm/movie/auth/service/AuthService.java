@@ -86,7 +86,7 @@ public class AuthService {
                 .expiresAt(now.plusHours(2))
                 .build());
 
-        String link = baseUrl + "/api/auth/reset/verify?token=" + pr.getToken();
+        String link = baseUrl + "/reset-password?token=" + pr.getToken();
         return mailService.sendPasswordReset(user, link);   // trả ServiceResult luôn
     }
 
@@ -96,7 +96,7 @@ public class AuthService {
         if (pr == null || pr.getExpiresAt().isBefore(OffsetDateTime.now()))
             return ServiceResult.Failure()
                     .code(ErrorCode.RESET_TOKEN_INVALID)
-                    .message("Token hết hạn hoặc không hợp lệ");
+                    .message("Token expired or invalid!");
         return ServiceResult.Success().message("Token hợp lệ");
     }
 
@@ -112,14 +112,14 @@ public class AuthService {
         if (pr == null || pr.getExpiresAt().isBefore(OffsetDateTime.now()))
             return ServiceResult.Failure()
                     .code(ErrorCode.RESET_TOKEN_INVALID)
-                    .message("Token hết hạn hoặc không hợp lệ");
+                    .message("Token expired or invalid!");
 
         User user = pr.getUser();
         user.setPasswordHash(encoder.encode(req.password()));
         userRepo.save(user);
         prRepo.delete(pr);
 
-        return ServiceResult.Success().message("Đặt lại mật khẩu thành công");
+        return ServiceResult.Success().message("Password reset successful!");
     }
 
     public ServiceResult register(RegisterRequest r, String baseUrl) {
@@ -177,7 +177,7 @@ public class AuthService {
             if (user.getRole() == null) user.setRole(viewerRole);
             userRepo.save(user);
 
-            String link = baseUrl + "/api/auth/verify?token=" + vt.getToken();
+            String link = baseUrl + "/api/auth/verifyRedirect?token=" + vt.getToken();
             return mailService.sendRegisterVerification(user, link);
 
         } else {
@@ -197,7 +197,7 @@ public class AuthService {
                     .expiresAt(OffsetDateTime.now().plusDays(1))
                     .build());
 
-            String link = baseUrl + "/api/auth/verify?token=" + vt.getToken();
+            String link = baseUrl + "/api/auth/verifyRedirect?token=" + vt.getToken();
             return mailService.sendRegisterVerification(user, link);
         }
     }
@@ -240,11 +240,15 @@ public class AuthService {
         String target;
         if (Boolean.TRUE.equals(result.getSuccess())) {
             // success -> frontend page
-            target = "https://frontend.host/verify-success?email=" +
+//            target = "https://frontend.host/verify-success?email=" +
+//                    UriUtils.encode((String) result.getData(), StandardCharsets.UTF_8);
+            target = "http://localhost:5173/verify-success?email=" +
                     UriUtils.encode((String) result.getData(), StandardCharsets.UTF_8);
         } else {
             // failure -> show reason
-            target = "https://frontend.host/verify-fail?msg=" +
+//            target = "https://frontend.host/verify-fail?msg=" +
+//                    UriUtils.encode(result.getMessage(), StandardCharsets.UTF_8);
+            target = "http://localhost:5173/verify-fail?msg=" +
                     UriUtils.encode(result.getMessage(), StandardCharsets.UTF_8);
         }
         return new RedirectView(target);

@@ -41,5 +41,6 @@ public class JwtTokenProvider {
                 .sign(alg);
     }
 
-    public DecodedJWT verify(String token) { return JWT.require(alg).build().verify(token); }
+    public DecodedJWT verify(String token) {
+        return JWT.require(alg).build().verify(token); }
 }
