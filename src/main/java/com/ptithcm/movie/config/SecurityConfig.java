@@ -81,9 +81,8 @@ public class SecurityConfig {
                                 "/api/users/me").hasAnyAuthority(GlobalConstant.ROLE_VIEWER,
                                 GlobalConstant.ROLE_SUPER_ADMIN, GlobalConstant.ROLE_MOVIE_ADMIN, GlobalConstant.COMMENT_ADMIN)
                         // TMDB API
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/movies/**").hasAnyAuthority(GlobalConstant.ROLE_MOVIE_ADMIN,
-                                GlobalConstant.ROLE_SUPER_ADMIN)
+                        .requestMatchers("/api/movies/**", "/api/seasons/**", "/api/genres/**")
+                                .hasAnyAuthority(GlobalConstant.ROLE_MOVIE_ADMIN, GlobalConstant.ROLE_SUPER_ADMIN)
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> {

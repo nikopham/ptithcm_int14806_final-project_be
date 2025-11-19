@@ -31,6 +31,9 @@ public class Season {
     @Column(length = 128)
     private String title;
 
+    @Column(name = "tmdb_id", unique = true)
+    private Integer tmdbId;
+
     /* -------- relations -------- */
     @OneToMany(mappedBy = "season", cascade = CascadeType.ALL,
                orphanRemoval = true)

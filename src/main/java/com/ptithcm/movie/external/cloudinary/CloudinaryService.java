@@ -15,21 +15,22 @@ public class CloudinaryService {
     private Cloudinary cloudinary;
 
     /**
-     * Dùng cho Use Case 1: Upload avatar người dùng
+     * (CẬP NHẬT) Dùng cho Use Case 1: Upload file (Avatar, Poster)
      * @param file File (ảnh) người dùng upload
-     * @param folder Tên thư mục trên Cloudinary (ví dụ: "avatars")
+     * @param publicId Tên file duy nhất (vd: "streamify/movies/posters/19995")
      * @return URL của ảnh đã upload
      */
-    public String uploadFile(MultipartFile file, String folder) throws IOException {
+    public String uploadFile(MultipartFile file, String publicId) throws IOException {
         Map<?, ?> uploadResult = cloudinary.uploader().upload(
-                file.getBytes(), // Upload trực tiếp mảng byte
+                // SỬA LẠI THÀNH .getBytes()
+                // (Vì poster/backdrop là file nhỏ, cách này ổn định hơn)
+                file.getBytes(),
                 ObjectUtils.asMap(
-                        "folder", folder // Chỉ định thư mục
-                        // "public_id", "custom_name" // Tùy chọn: set tên file
+                        "public_id", publicId,
+                        "overwrite", true,
+                        "resource_type", "image" // (Chỉ định rõ là 'image')
                 )
         );
-
-        // Trả về "secure_url", là URL (https) của ảnh
         return (String) uploadResult.get("secure_url");
     }
 
@@ -40,18 +41,14 @@ public class CloudinaryService {
      * @return URL (https) của ảnh trên Cloudinary
      */
     public String uploadFromUrl(String url, String publicId) throws IOException {
-        // Đây là Best Practice
-        // Cloudinary sẽ TỰ ĐỘNG kéo ảnh từ URL của TMDb về
-        // Server của bạn không cần tải về rồi upload lên (tiết kiệm băng thông)
         Map<?, ?> uploadResult = cloudinary.uploader().upload(
-                url, // Chỉ cần truyền URL
+                url,
                 ObjectUtils.asMap(
-                        "public_id", publicId, // Đặt tên file chính xác
-                        "overwrite", true, // Ghi đè nếu file đã tồn tại
+                        "public_id", publicId,
+                        "overwrite", true,
                         "resource_type", "image"
                 )
         );
-
         return (String) uploadResult.get("secure_url");
     }
 

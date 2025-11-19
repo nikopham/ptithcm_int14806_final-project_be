@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.ptithcm.movie.common.constant.AgeRating;
+import com.ptithcm.movie.common.constant.MovieStatus;
 import com.ptithcm.movie.common.constant.VideoQuality;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -58,14 +59,14 @@ public class Movie {
     private String posterUrl;
 
     @Column(name = "is_series")
-    private Boolean series;
+    private Boolean isSeries;
 
     @Column
     private Long viewCount = 0L;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 16)
-    private ContentStatus status;
+    private MovieStatus status;
 
     @Column(unique = true)
     private String slug;
@@ -144,6 +145,5 @@ public class Movie {
                orphanRemoval = true)
     private List<Season> seasons;
 
-    /* -------- enum -------- */
-    public enum ContentStatus { DRAFT, HIDDEN, PUBLISHED }
+
 }

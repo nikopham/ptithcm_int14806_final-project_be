@@ -10,6 +10,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 @Service
 public class TMDbService {
 
@@ -114,6 +122,56 @@ public class TMDbService {
                 .bodyToMono(TvSeasonDetailDto.class); // Map vào DTO Season
 
         return responseMono.block(); // Trả về kết quả
+    }
+
+    @Cacheable(value = "tmdb-genres-search", key = "#query") // Cache kết quả tìm kiếm
+    public List<GenreDto> searchGenresOnTmdb(String query) {
+
+        // 1. Gọi API lấy Movie Genres
+        Mono<TmdbGenreListDto> movieGenresMono = tmdbWebClient.get()
+                .uri(uri -> uri.path("/genre/movie/list")
+                        .queryParam("api_key", apiKey)
+                        .queryParam("language", "en-US")
+                        .build())
+                .retrieve()
+                .bodyToMono(TmdbGenreListDto.class);
+
+        // 2. Gọi API lấy TV Genres
+        Mono<TmdbGenreListDto> tvGenresMono = tmdbWebClient.get()
+                .uri(uri -> uri.path("/genre/tv/list")
+                        .queryParam("api_key", apiKey)
+                        .queryParam("language", "en-US")
+                        .build())
+                .retrieve()
+                .bodyToMono(TmdbGenreListDto.class);
+
+        // 3. Chạy song song và gộp kết quả
+        return Mono.zip(movieGenresMono, tvGenresMono)
+                .map(tuple -> {
+                    List<GenreDto> movieGenres = tuple.getT1().genres();
+                    List<GenreDto> tvGenres = tuple.getT2().genres();
+
+                    // Gộp 2 list và dùng Map để loại bỏ ID trùng nhau
+                    // (Ví dụ: "Action" có thể xuất hiện ở cả 2 list)
+                    Map<Integer, GenreDto> uniqueGenres = new HashMap<>();
+
+                    Stream.concat(movieGenres.stream(), tvGenres.stream())
+                            .forEach(g -> uniqueGenres.putIfAbsent(g.id(), g));
+
+                    // Lấy danh sách values
+                    return new ArrayList<>(uniqueGenres.values());
+                })
+                .map(allGenres -> {
+                    // 4. Lọc theo keyword (nếu query không rỗng)
+                    if (query == null || query.isBlank()) {
+                        return allGenres; // Trả về hết
+                    }
+                    String lowerQuery = query.toLowerCase();
+                    return allGenres.stream()
+                            .filter(g -> g.name().toLowerCase().contains(lowerQuery))
+                            .collect(Collectors.toList());
+                })
+                .block(); // Block an toàn
     }
 }
 

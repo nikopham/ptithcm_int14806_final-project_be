@@ -1,16 +1,15 @@
 package com.ptithcm.movie.movie.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -27,6 +26,14 @@ public class Genre {
   @Column(name = "tmdb_id", unique = true)
   private Integer tmdbId;
 
-  @Column(length = 64, unique = true)
-  private String name;
+    @Column(unique = true, nullable = false, length = 64)
+    private String name;
+
+    /**
+     * (MỚI) Map quan hệ ngược để thực hiện JOIN trong query.
+     * JsonIgnore để tránh vòng lặp vô tận khi serialize.
+     */
+    @ManyToMany(mappedBy = "genres")
+    @JsonIgnore
+    private Set<Movie> movies = new HashSet<>();
 }

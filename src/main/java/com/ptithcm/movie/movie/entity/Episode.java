@@ -1,17 +1,12 @@
 package com.ptithcm.movie.movie.entity;
 
 
+import java.time.LocalDate;
 import java.util.UUID;
 
+import jakarta.persistence.*;
 import org.hibernate.annotations.UuidGenerator;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -28,12 +23,11 @@ import lombok.Setter;
 public class Episode {
 
     @Id
-    @UuidGenerator
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    /* -------- FK -------- */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "season_id")
+    @JoinColumn(name = "season_id", nullable = false)
     private Season season;
 
     @Column(name = "episode_number", nullable = false)
@@ -45,6 +39,18 @@ public class Episode {
     @Column(name = "duration_min")
     private Integer durationMin;
 
-    @Column(columnDefinition = "text")
+    @Column(columnDefinition = "TEXT")
     private String synopsis;
+
+    @Column(name = "video_url", columnDefinition = "TEXT")
+    private String videoUrl;
+
+    @Column(name = "still_path", columnDefinition = "TEXT")
+    private String stillPath;
+
+    @Column(name = "air_date")
+    private LocalDate airDate;
+
+    @Column(name = "tmdb_id")
+    private Integer tmdbId;
 }
