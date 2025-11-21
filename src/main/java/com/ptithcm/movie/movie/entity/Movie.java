@@ -1,49 +1,48 @@
 package com.ptithcm.movie.movie.entity;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import com.ptithcm.movie.user.entity.User;
+import jakarta.persistence.*;
+import lombok.*;
+
 import java.time.OffsetDateTime;
+import java.util.Set;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import com.ptithcm.movie.common.constant.AgeRating;
-import com.ptithcm.movie.common.constant.MovieStatus;
-import com.ptithcm.movie.common.constant.VideoQuality;
-import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.UuidGenerator;
-
-import com.ptithcm.movie.user.entity.User;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+@Entity
+@Table(name = "movies")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Entity
-@Table(name = "movies",
-       indexes = { @Index(name = "idx_movies_title_trgm", columnList = "title") }
-)
 public class Movie {
 
     @Id
-    @UuidGenerator
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(length = 256, nullable = false)
+    @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "text")
+    @Column(name = "original_title")
+    private String originalTitle;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(unique = true)
+    private String slug;
 
     @Column(name = "release_date")
     private LocalDate releaseDate;
@@ -51,52 +50,44 @@ public class Movie {
     @Column(name = "duration_min")
     private Integer durationMin;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "age_rating", length = 5)
-    private AgeRating ageRating;
+    @Column(name = "age_rating", length = 8)
+    private String ageRating;
 
     @Column(name = "poster_url")
     private String posterUrl;
 
-    @Column(name = "is_series")
-    private Boolean isSeries;
-
-    @Column
-    private Long viewCount = 0L;
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 16)
-    private MovieStatus status;
-
-    @Column(unique = true)
-    private String slug;
-
-    @Column(unique = true)
-    private Integer tmdbId;
-
-    @Column(name = "imdb_id", unique = true, length = 16) // <-- Sửa: VARCHAR(16)
-    private String imdbId;
-
-    @Column(name = "imdb_score", precision = 3, scale = 1)
-    private BigDecimal imdbScore;
-
-    @Column
-    private String originalTitle;
-
-    @Column
+    @Column(name = "backdrop_url")
     private String backdropUrl;
 
-    @Column
+    @Column(name = "trailer_url")
     private String trailerUrl;
 
-    @Column
+    @Column(name = "video_url")
     private String videoUrl;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "quality", length = 16)
-    private VideoQuality quality;
+    @Builder.Default
+    private String quality = "FHD";
 
-    @ManyToOne(fetch = FetchType.LAZY)          // created_by
+    @Column(name = "is_series")
+    private boolean isSeries;
+
+    @Builder.Default
+    private String status = "PUBLISHED";
+
+    @Column(name = "view_count")
+    private Long viewCount;
+
+    // Mapping External IDs
+    @Column(name = "movielens_id", unique = true)
+    private Integer movielensId;
+
+    @Column(name = "imdb_id")
+    private String imdbId;
+
+    @Column(name = "imdb_score")
+    private BigDecimal imdbScore;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
 
@@ -108,15 +99,9 @@ public class Movie {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    @JoinTable(
-            name = "movie_countries",
-            joinColumns = @JoinColumn(name = "movie_id"),
-            inverseJoinColumns = @JoinColumn(name = "country_id")
-    )
-    private Set<Country> countries = new HashSet<>();
+    // --- RELATIONS ---
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @ManyToMany
     @JoinTable(
             name = "movie_genres",
             joinColumns = @JoinColumn(name = "movie_id"),
@@ -124,7 +109,15 @@ public class Movie {
     )
     private Set<Genre> genres = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @ManyToMany
+    @JoinTable(
+            name = "movie_countries",
+            joinColumns = @JoinColumn(name = "movie_id"),
+            inverseJoinColumns = @JoinColumn(name = "country_id")
+    )
+    private Set<Country> countries = new HashSet<>();
+
+    @ManyToMany
     @JoinTable(
             name = "movie_actors",
             joinColumns = @JoinColumn(name = "movie_id"),
@@ -132,18 +125,11 @@ public class Movie {
     )
     private Set<Person> actors = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @ManyToMany
     @JoinTable(
             name = "movie_directors",
             joinColumns = @JoinColumn(name = "movie_id"),
             inverseJoinColumns = @JoinColumn(name = "person_id")
     )
     private Set<Person> directors = new HashSet<>();
-
-    /* -------- relations -------- */
-    @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL,
-               orphanRemoval = true)
-    private List<Season> seasons;
-
-
 }

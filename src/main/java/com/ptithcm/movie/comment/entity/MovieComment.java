@@ -1,41 +1,54 @@
 package com.ptithcm.movie.comment.entity;
 
-
 import com.ptithcm.movie.movie.entity.Movie;
 import com.ptithcm.movie.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-@Entity @Table(name="movie_comments",
-        indexes=@Index(name="idx_comment_sentiment", columnList="sentiment_score"))
+@Entity
+@Table(name = "movie_comments")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class MovieComment {
 
-    @Id @UuidGenerator private UUID id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="movie_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "movie_id")
     private Movie movie;
 
-    @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="parent_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
     private MovieComment parent;
 
-    @Column(columnDefinition="text", nullable=false) private String body;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String body;
 
-    @Column(name="sentiment_score", precision=4, scale=3)
+    @Column(name = "sentiment_score")
     private BigDecimal sentimentScore;
 
-    private Boolean isHidden = false;
+    @Column(name = "is_toxic")
+    private boolean isToxic;
+
+    @Column(name = "is_hidden")
+    private boolean isHidden;
 
     @CreationTimestamp
-    @Column(name="created_at", updatable=false)
+    @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 }

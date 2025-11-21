@@ -1,45 +1,38 @@
 package com.ptithcm.movie.movie.entity;
 
-import com.ptithcm.movie.common.constant.PersonJob;
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.*;
 import java.time.LocalDate;
 import java.util.UUID;
 
+@Entity
+@Table(name = "people")
 @Getter
 @Setter
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
-@Entity
-@Table(name = "people", schema = "public")
+@AllArgsConstructor
+@Builder
 public class Person {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id")
     private UUID id;
 
-    @Column
-    private Integer tmdbId;
-
-    @Column
+    @Column(name = "full_name", nullable = false, length = 128)
     private String fullName;
 
-    @Column
+    @Column(name = "profile_path")
     private String profilePath;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String biography;
 
-    @Column
+    @Column(name = "birth_date")
     private LocalDate birthDate;
 
-    @Column
+    @Column(name = "place_of_birth")
     private String placeOfBirth;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "job")
-    private PersonJob job;
-
+    @Builder.Default
+    private String job = "ACTOR";
 }

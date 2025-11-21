@@ -24,7 +24,7 @@ spring:
       max-file-size: 1500MB
       max-request-size: 1500MB
   datasource:
-    url: jdbc:postgresql://localhost:5433/postgres
+    url: jdbc:postgresql://localhost:5433/moviedb
     username: h1eu
     password: "password"
   jpa:

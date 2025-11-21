@@ -20,7 +20,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Value("${app.base-url:http://localhost:5173}")
+    @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
     @PostMapping("/register")

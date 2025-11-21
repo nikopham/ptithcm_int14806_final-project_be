@@ -3,8 +3,8 @@ package com.ptithcm.movie.auth.session;
 
 import com.ptithcm.movie.config.JwtConfig;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;

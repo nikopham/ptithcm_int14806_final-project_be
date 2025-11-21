@@ -5,15 +5,16 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.UuidGenerator;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name="reviews",
-        uniqueConstraints=@UniqueConstraint(
-                name="uk_user_movie_review", columnNames={"user_id", "movie_id"}))
+@Table(name = "reviews", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"user_id", "movie_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,31 +23,30 @@ import java.util.UUID;
 public class Review {
 
     @Id
-    @UuidGenerator
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="user_id")
+    @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="movie_id")
+    @JoinColumn(name = "movie_id")
     private Movie movie;
 
-    @Column(nullable=false)
-    private Short rating;          // 1-5
+    @Column(nullable = false)
+    private BigDecimal rating;
 
-    @Column(length=128)
     private String title;
 
-    @Column(columnDefinition="text")
+    @Column(columnDefinition = "TEXT")
     private String body;
 
     @CreationTimestamp
-    @Column(name="created_at", updatable=false)
+    @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name="updated_at")
+    @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 }

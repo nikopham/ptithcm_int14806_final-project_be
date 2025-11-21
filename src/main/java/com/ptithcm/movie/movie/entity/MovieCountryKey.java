@@ -1,9 +1,9 @@
 package com.ptithcm.movie.movie.entity;
 
+import jakarta.persistence.Embeddable;
+
 import java.io.Serializable;
 import java.util.UUID;
-
-import jakarta.persistence.Embeddable;
 
 @Embeddable
 public class MovieCountryKey implements Serializable {

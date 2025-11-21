@@ -1,39 +1,33 @@
 package com.ptithcm.movie.movie.entity;
 
 
+import jakarta.persistence.*;
+import lombok.*;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.UuidGenerator;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+@Entity
+@Table(name = "episodes", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"season_id", "episode_number"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Entity
-@Table(name = "episodes")
 public class Episode {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "season_id", nullable = false)
+    @JoinColumn(name = "season_id")
     private Season season;
 
     @Column(name = "episode_number", nullable = false)
     private Integer episodeNumber;
 
-    @Column(length = 256)
     private String title;
 
     @Column(name = "duration_min")
@@ -42,15 +36,12 @@ public class Episode {
     @Column(columnDefinition = "TEXT")
     private String synopsis;
 
-    @Column(name = "video_url", columnDefinition = "TEXT")
+    @Column(name = "video_url")
     private String videoUrl;
 
-    @Column(name = "still_path", columnDefinition = "TEXT")
+    @Column(name = "still_path")
     private String stillPath;
 
     @Column(name = "air_date")
     private LocalDate airDate;
-
-    @Column(name = "tmdb_id")
-    private Integer tmdbId;
 }

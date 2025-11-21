@@ -11,6 +11,5 @@ import java.util.UUID;
 
 @Repository
 public interface SeasonRepository extends JpaRepository<Season, UUID> {
-    @Query("SELECT s FROM Season s LEFT JOIN FETCH s.episodes WHERE s.movie.id = :movieId")
-    List<Season> findByMovieIdWithEpisodes(@Param("movieId") UUID movieId);
+
 }

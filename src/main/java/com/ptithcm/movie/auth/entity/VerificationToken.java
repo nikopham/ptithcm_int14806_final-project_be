@@ -3,9 +3,16 @@ package com.ptithcm.movie.auth.entity;
 import com.ptithcm.movie.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -18,16 +25,20 @@ import java.util.UUID;
 public class VerificationToken {
 
     @Id
-    @UuidGenerator
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true, length = 64)
     private String token;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private OffsetDateTime createdAt;
+    @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
 }

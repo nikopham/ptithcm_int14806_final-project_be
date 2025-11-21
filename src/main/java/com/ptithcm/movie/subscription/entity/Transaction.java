@@ -1,69 +1,65 @@
 package com.ptithcm.movie.subscription.entity;
 
+import com.ptithcm.movie.user.entity.User;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
+
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.UuidGenerator;
-import org.hibernate.type.SqlTypes;
-
-import com.ptithcm.movie.user.entity.User;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-@Entity @Table(name = "transactions")
+@Entity
+@Table(name = "transactions")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Transaction {
 
-    @Id @UuidGenerator
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 32, nullable = false)
-    private PaymentProvider provider;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subscription_id")
+    private UserSubscription subscription;
 
-    @Column(precision = 12, scale = 2, nullable = false)
-    private BigDecimal amount;
-
-    @Column
-    private String currency;
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 16, nullable = false)
-    private TxStatus status;
+    @Column(nullable = false, length = 32)
+    private String gateway;
 
     @Column(name = "payment_ref", length = 128)
     private String paymentRef;
 
-    @JdbcTypeCode(SqlTypes.JSON)            
-    @Column(columnDefinition = "jsonb")
-    private Map<String,Object> metadata;     
+    @Column(nullable = false)
+    private BigDecimal amount;
+
+    @Builder.Default
+    private String currency = "VND";
+
+    @Column(nullable = false, length = 16)
+    private String status;
+
+    // Map cột metadata kiểu JSONB sang Map Java
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
+    private Map<String, Object> metadata;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 
-    /* -------- enum -------- */
-    public enum PaymentProvider { STRIPE, MOMO, VNPAY }
-    public enum TxStatus { PENDING, SUCCESS, FAILED }
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

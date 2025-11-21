@@ -5,22 +5,28 @@ import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import jakarta.persistence.*;
+import lombok.*;
+import java.util.UUID;
+
+@Entity
+@Table(name = "seasons", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"movie_id", "season_number"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Entity
-@Table(name = "seasons")
 public class Season {
 
     @Id
-    @UuidGenerator
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    /* -------- FK -------- */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id")
     private Movie movie;
@@ -30,12 +36,4 @@ public class Season {
 
     @Column(length = 128)
     private String title;
-
-    @Column(name = "tmdb_id", unique = true)
-    private Integer tmdbId;
-
-    /* -------- relations -------- */
-    @OneToMany(mappedBy = "season", cascade = CascadeType.ALL,
-               orphanRemoval = true)
-    private List<Episode> episodes;
 }

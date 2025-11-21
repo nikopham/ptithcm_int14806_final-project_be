@@ -4,7 +4,7 @@ public enum VideoQuality {
 
     FOUR_K("4K"),
     TWO_K("2K"),
-    FULL_HD("1080P"),
+    FHD("1080P"),
     HD("720P"),
     SD("480P"),      // Standard Definition
     LOW("360P");     // Low Resolution

@@ -1,39 +1,29 @@
 package com.ptithcm.movie.auth.entity;
 
+import com.ptithcm.movie.user.entity.User;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.UuidGenerator;
-import org.hibernate.type.SqlTypes;
-
-import com.ptithcm.movie.user.entity.User;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-@Getter @Setter @Builder
-@NoArgsConstructor @AllArgsConstructor
-@Entity 
+@Entity
 @Table(name = "user_sessions")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class UserSession {
 
     @Id
-    @UuidGenerator
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    /* ---------- FK ---------- */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
@@ -44,15 +34,15 @@ public class UserSession {
     @Column(name = "user_agent")
     private String userAgent;
 
-    @JdbcTypeCode(SqlTypes.INET)
     @Column(name = "ip_address", columnDefinition = "inet")
-    private String ipAddress;
+    @JdbcTypeCode(SqlTypes.OTHER)
+    private String ipAddress; // PostgreSQL INET map to String in Java
 
     @Column(name = "expires_at")
     private OffsetDateTime expiresAt;
 
-    @Column(name = "revoked")
-    private Boolean revoked;
+    @Builder.Default
+    private boolean revoked = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

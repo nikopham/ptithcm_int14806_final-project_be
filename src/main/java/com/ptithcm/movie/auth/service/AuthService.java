@@ -2,7 +2,6 @@ package com.ptithcm.movie.auth.service;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.ptithcm.movie.auth.dto.*;
 import com.ptithcm.movie.auth.entity.PasswordResetToken;
 import com.ptithcm.movie.auth.entity.VerificationToken;
@@ -140,7 +139,7 @@ public class AuthService {
             user = opt.get();
 
             /* Đã xác minh */
-            if (Boolean.TRUE.equals(user.getEmailVerified()))
+            if (Boolean.TRUE.equals(user.isEmailVerified()))
                 return ServiceResult.Failure()
                         .code(ErrorCode.EMAIL_EXISTS)
                         .message(ErrorMessage.EMAIL_EXISTS);
@@ -188,7 +187,7 @@ public class AuthService {
                     .passwordHash(encoder.encode(r.password()))
                     .emailVerified(false)
                     .role(viewerRole)
-                    .active(true)
+                    .isActive(true)
                     .build());
 
             VerificationToken vt = tokenRepo.save(VerificationToken.builder()
@@ -217,7 +216,7 @@ public class AuthService {
                     .message("Token expired");
 
         User user = vt.getUser();
-        if (Boolean.TRUE.equals(user.getEmailVerified()))
+        if (Boolean.TRUE.equals(user.isEmailVerified()))
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
                     .message("Email đã được xác minh từ trước")
@@ -267,7 +266,7 @@ public class AuthService {
                     .message(ErrorMessage.BAD_CREDENTIALS);
 
         /* 2. Chưa xác minh email */
-        if (Boolean.FALSE.equals(user.getEmailVerified()))
+        if (Boolean.FALSE.equals(user.isEmailVerified()))
             return ServiceResult.Failure()
                     .code(ErrorCode.EMAIL_NOT_VERIFIED)
                     .message(ErrorMessage.EMAIL_NOT_VERIFIED);

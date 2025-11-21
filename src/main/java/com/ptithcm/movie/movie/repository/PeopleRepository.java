@@ -13,13 +13,4 @@ import java.util.UUID;
 @Repository
 public interface PeopleRepository extends JpaRepository<Person, UUID> {
 
-    /**
-     * Tự động tạo query:
-     * SELECT * FROM people
-     * WHERE full_name ILIKE %:query%  (ILIKE = không phân biệt hoa thường)
-     * AND job = :job
-     */
-    List<Person> findByFullNameContainingIgnoreCaseAndJob(String query, PersonJob job);
-
-    Optional<Person> findByTmdbId(Integer tmdbId);
 }
