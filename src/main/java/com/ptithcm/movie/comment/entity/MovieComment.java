@@ -45,6 +45,9 @@ public class MovieComment {
     @Column(name = "is_toxic")
     private boolean isToxic;
 
+    @Column(name = "is_edited")
+    private boolean isEdited;
+
     @Column(name = "is_hidden")
     private boolean isHidden;
 

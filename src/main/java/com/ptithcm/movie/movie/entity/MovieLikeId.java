@@ -12,7 +12,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-class MovieLikeId implements Serializable {
+public class MovieLikeId implements Serializable {
     private UUID userId;
     private UUID movieId;
 }

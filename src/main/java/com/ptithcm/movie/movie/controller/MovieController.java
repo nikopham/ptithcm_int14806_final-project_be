@@ -1,0 +1,102 @@
+package com.ptithcm.movie.movie.controller;
+
+import com.ptithcm.movie.common.dto.ServiceResult;
+import com.ptithcm.movie.external.cloudflare.CloudflareService;
+import com.ptithcm.movie.movie.dto.request.MovieCreateRequest;
+import com.ptithcm.movie.movie.dto.request.MovieSearchRequest;
+import com.ptithcm.movie.movie.dto.request.MovieUpdateRequest;
+import com.ptithcm.movie.movie.service.MovieService;
+import com.ptithcm.movie.movie.service.ReviewService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1/movies")
+@RequiredArgsConstructor
+public class MovieController {
+
+    private final MovieService movieService;
+    private final ReviewService reviewService;
+    private final CloudflareService cloudflareService;
+
+    @GetMapping("/search")
+    public ResponseEntity<ServiceResult> searchMovies(
+            @ModelAttribute MovieSearchRequest request,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        ServiceResult result = movieService.searchMovies(request, pageable);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/search-liked")
+    public ResponseEntity<ServiceResult> getLikedMovies(
+            @ModelAttribute MovieSearchRequest request,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(movieService.searchMovieUserLike(request, pageable));
+    }
+
+    @PostMapping(path = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ServiceResult> createMovie(
+            @ModelAttribute MovieCreateRequest request
+    ) {
+        ServiceResult result = movieService.createMovie(request);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping(path = "/top-10")
+    public ResponseEntity<ServiceResult> getTop10Movie(
+            @RequestParam(required = false) Boolean isSeries
+    ) {
+        ServiceResult result = movieService.getMostViewedMovies(isSeries);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{id}/info")
+    public ResponseEntity<ServiceResult> getMovieInfo(@PathVariable UUID id) {
+        return ResponseEntity.ok(movieService.getMovieInfo(id));
+    }
+
+    @PutMapping(value = "/update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ServiceResult> updateMovie(
+            @PathVariable UUID id,
+            @ModelAttribute MovieUpdateRequest request
+    ) {
+        return ResponseEntity.ok(movieService.updateMovie(id, request));
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<ServiceResult> deleteMovie(@PathVariable UUID id) {
+        return ResponseEntity.ok(movieService.deleteMovie(id));
+    }
+
+    @GetMapping("/detail/{id}")
+    public ResponseEntity<ServiceResult> getMovieDetail(@PathVariable UUID id) {
+        return ResponseEntity.ok(movieService.getMovieDetail(id));
+    }
+
+    @GetMapping("/detail/{id}/reviews")
+    public ResponseEntity<ServiceResult> getMovieReviews(
+            @PathVariable UUID id,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(reviewService.getReviewsByMovie(id, pageable));
+    }
+
+    @PostMapping("/like/{id}")
+    public ResponseEntity<ServiceResult> toggleLikeMovie(@PathVariable UUID id) {
+        return ResponseEntity.ok(movieService.toggleLikeMovie(id));
+    }
+
+    @GetMapping("/video-status/{videoUid}")
+    public ResponseEntity<ServiceResult> getVideoStatus(@PathVariable String videoUid) {
+        return ResponseEntity.ok(movieService.checkAndSyncVideoStatus(videoUid));
+    }
+}

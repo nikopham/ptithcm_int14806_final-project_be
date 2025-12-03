@@ -4,6 +4,7 @@ public final class ErrorCode {
 
     /* ===== thành công ===== */
     public static final int SUCCESS              = 0;
+    public static final int FAILED               = 5000;
 
     /* ===== lỗi xác thực ===== */
     public static final int UNAUTHORIZED         = 1001;
@@ -15,10 +16,12 @@ public final class ErrorCode {
     /* ===== lỗi người dùng ===== */
     public static final int EMAIL_EXISTS         = 2001;
     public static final int EMAIL_NOT_VERIFIED   = 2002;
+    public static final int BANNED_ACCOUNT       = 2006;
 
     public static final int BAD_CREDENTIALS      = 2003;
     public static final int TOO_MANY_REQUESTS    = 2004;
     public static final int MAIL_SEND_ERROR      = 5002;
+    public static final int INVALIDATE_REQUEST   = 2005;
 
 
     /* ===== lỗi hệ thống ===== */

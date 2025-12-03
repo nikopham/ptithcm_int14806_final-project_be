@@ -1,0 +1,188 @@
+package com.ptithcm.movie.comment.service;
+
+import com.ptithcm.movie.auth.security.UserPrincipal;
+import com.ptithcm.movie.comment.dto.request.CommentRequest;
+import com.ptithcm.movie.comment.dto.response.CommentResponse;
+import com.ptithcm.movie.comment.entity.MovieComment;
+import com.ptithcm.movie.comment.repository.MovieCommentRepository;
+import com.ptithcm.movie.common.constant.ErrorCode;
+import com.ptithcm.movie.common.dto.ServiceResult;
+import com.ptithcm.movie.movie.entity.Movie;
+import com.ptithcm.movie.movie.repository.MovieRepository;
+import com.ptithcm.movie.user.dto.UserProfileResponse;
+import com.ptithcm.movie.user.entity.User;
+import com.ptithcm.movie.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class CommentService {
+
+    private final MovieCommentRepository commentRepository;
+    private final UserRepository userRepository;
+    private final MovieRepository movieRepository;
+
+    @Transactional(readOnly = true)
+    public ServiceResult getCommentsByMovie(UUID movieId, Pageable pageable) {
+        Page<MovieComment> commentPage = commentRepository.findRootCommentsByMovieId(movieId, pageable);
+
+        List<UUID> parentIds = commentPage.getContent().stream()
+                .map(MovieComment::getId)
+                .toList();
+
+        Map<UUID, Long> replyCounts = new HashMap<>();
+        if (!parentIds.isEmpty()) {
+            List<Object[]> counts = commentRepository.countRepliesByParentIds(parentIds);
+            for (Object[] row : counts) {
+                replyCounts.put((UUID) row[0], (Long) row[1]);
+            }
+        }
+
+        Page<CommentResponse> response = commentPage.map(c -> CommentResponse.builder()
+                .id(c.getId())
+                .body(c.getBody())
+                .createdAt(c.getCreatedAt())
+                .isEdited(c.isEdited())
+                .parentId(c.getParent() != null ? c.getParent().getId() : null)
+                // User Info
+                .userId(c.getUser().getId())
+                .username(c.getUser().getUsername())
+                .userAvatar(c.getUser().getAvatarUrl())
+                // Reply Count
+                .replyCount(replyCounts.getOrDefault(c.getId(), 0L))
+                .build());
+
+        return ServiceResult.Success()
+                .message("Get comments successfully")
+                .data(response);
+    }
+
+
+
+    private User getCurrentUser() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        UUID userId = null;
+
+        if (principal instanceof UserPrincipal userPrincipal) {
+            User u = userPrincipal.getUser();
+            userId = u.getId();
+        }
+
+        if (userId != null) {
+            return userRepository.findById(userId).orElse(null);
+        }
+        return null;
+    }
+    @Transactional
+    public ServiceResult createComment(CommentRequest request) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return ServiceResult.Failure().code(401).message("Unauthorized");
+
+        Movie movie = movieRepository.findById(request.getMovieId())
+                .orElseThrow(() -> new RuntimeException("Movie not found"));
+
+        MovieComment comment = MovieComment.builder()
+                .user(currentUser)
+                .movie(movie)
+                .body(request.getBody())
+                .isEdited(false)
+                .isHidden(false)
+                .build();
+
+        if (request.getParentId() != null) {
+            MovieComment parent = commentRepository.findById(request.getParentId())
+                    .orElseThrow(() -> new RuntimeException("Parent comment not found"));
+
+            if (!parent.getMovie().getId().equals(movie.getId())) {
+                return ServiceResult.Failure().code(400).message("Parent comment belongs to another movie");
+            }
+
+            if (request.getParentId() != null) {
+                MovieComment parentNode = commentRepository.findById(request.getParentId())
+                        .orElseThrow(() -> new RuntimeException("Parent comment not found"));
+
+                if (!parentNode.getMovie().getId().equals(movie.getId())) {
+                    return ServiceResult.Failure().code(400).message("Invalid parent comment");
+                }
+
+                if (parentNode.getParent() == null) {
+
+                    comment.setParent(parentNode);
+                } else {
+                    comment.setParent(parentNode.getParent());
+                    String newBody = "@" + parentNode.getUser().getUsername() + " " + request.getBody();
+                    comment.setBody(newBody);
+                }
+            }
+
+            comment.setParent(parent);
+        }
+
+        // 3. AI Analysis Placeholder (Phân tích độc hại)
+        // analyzeAndSetToxicStatus(comment);
+
+        MovieComment savedComment = commentRepository.save(comment);
+
+        return ServiceResult.Success()
+                .message("Comment posted successfully")
+                .data(mapToCommentResponse(savedComment));
+    }
+
+    // --- 2. EDIT COMMENT ---
+    @Transactional
+    public ServiceResult editComment(UUID commentId, CommentRequest request) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return ServiceResult.Failure().code(401).message("Unauthorized");
+
+        MovieComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        if (!comment.getUser().getId().equals(currentUser.getId())) {
+            return ServiceResult.Failure().code(403).message("You can only edit your own comment");
+        }
+
+        comment.setBody(request.getBody());
+        comment.setEdited(true);
+
+        MovieComment updatedComment = commentRepository.save(comment);
+
+        return ServiceResult.Success()
+                .message("Comment updated successfully")
+                .data(mapToCommentResponse(updatedComment));
+    }
+
+    // --- Helper Map ---
+    private CommentResponse mapToCommentResponse(MovieComment c) {
+        return CommentResponse.builder()
+                .id(c.getId())
+                .body(c.getBody())
+                .createdAt(c.getCreatedAt())
+                .isEdited(c.isEdited())
+                .userId(c.getUser().getId())
+                .username(c.getUser().getUsername())
+                .userAvatar(c.getUser().getAvatarUrl())
+                .replyCount(0L)
+                .build();
+    }
+
+    // --- Helper AI (Mock) ---
+    private void analyzeAndSetToxicStatus(MovieComment comment) {
+        // Gọi API AI Server (Python) hoặc thư viện
+        // double score = aiService.analyze(comment.getBody());
+        // comment.setSentimentScore(BigDecimal.valueOf(score));
+        // if (score < -0.8) { comment.setIsToxic(true); comment.setIsHidden(true); }
+    }
+}

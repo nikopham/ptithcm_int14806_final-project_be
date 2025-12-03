@@ -8,5 +8,6 @@ import java.util.UUID;
 
 @Repository
 public interface EpisodeRepository extends JpaRepository<Episode, UUID> {
-    // (Hiện tại không cần hàm tùy chỉnh)
+    boolean existsBySeasonIdAndEpisodeNumber(UUID seasonId, Integer episodeNumber);
+    boolean existsBySeasonIdAndEpisodeNumberAndIdNot(UUID seasonId, Integer episodeNumber, UUID id);
 }

@@ -1,8 +1,10 @@
 package com.ptithcm.movie.config;
 
+import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -59,6 +61,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) // Trả về 500
     public ServiceResult handleRuntimeException(RuntimeException ex) {
-        return ServiceResult.Failure().message("An unexpected error occurred: " + ex.getMessage());
+        return ServiceResult.Failure().code(ErrorCode.INTERNAL_SERVER).message("An unexpected error occurred: " + ex.getMessage());
+    }
+
+
+    // 2. Bắt lỗi Validation (@Valid failed)
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<ServiceResult> handleValidationException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ServiceResult.Failure()
+                        .code(ErrorCode.INVALIDATE_REQUEST)
+                        .message("Invalid request data"));
+    }
+
+    // 3. Bắt tất cả lỗi còn lại (500)
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ServiceResult> handleGlobalException(Exception ex) {
+        ex.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ServiceResult.Failure()
+                        .code(ErrorCode.FAILED)
+                        .message("Internal Server Error: " + ex.getMessage()));
     }
 }

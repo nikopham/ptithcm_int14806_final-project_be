@@ -1,12 +1,11 @@
 package com.ptithcm.movie.movie.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,4 +35,8 @@ public class Season {
 
     @Column(length = 128)
     private String title;
+
+    @OneToMany(mappedBy = "season", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<Episode> episodes = new ArrayList<>();
 }

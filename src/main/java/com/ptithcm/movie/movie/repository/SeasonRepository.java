@@ -11,5 +11,12 @@ import java.util.UUID;
 
 @Repository
 public interface SeasonRepository extends JpaRepository<Season, UUID> {
+    boolean existsByMovieIdAndSeasonNumber(UUID movieId, Integer seasonNumber);
+    @Query("SELECT s FROM Season s " +
+            "LEFT JOIN FETCH s.episodes e " +
+            "WHERE s.movie.id = :movieId " +
+            "ORDER BY s.seasonNumber ASC, e.episodeNumber ASC")
+    List<Season> findAllByMovieIdWithEpisodes(@Param("movieId") UUID movieId);
 
+    boolean existsByMovieIdAndSeasonNumberAndIdNot(UUID movieId, Integer seasonNumber, UUID id);
 }

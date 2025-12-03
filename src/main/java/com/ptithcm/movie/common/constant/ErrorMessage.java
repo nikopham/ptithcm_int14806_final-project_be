@@ -10,6 +10,7 @@ public final class ErrorMessage {
 
     public static final String EMAIL_EXISTS       = "Email already registered";
     public static final String EMAIL_NOT_VERIFIED = "Email has not been verified";
+    public static final String BANNED_ACCOUNT     = "Account was banned";
     public static final String BAD_CREDENTIALS    = "Wrong email or password";
 
     public static final String INTERNAL_SERVER    = "Internal server error";

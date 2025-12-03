@@ -26,7 +26,15 @@ public class CorsConfig {
     private List<String> allowedOrigins = List.of("http://localhost:5173");
 
     private List<String> allowedMethods = List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS");
-    private List<String> allowedHeaders = List.of("*");
+    private List<String> allowedHeaders = List.of(
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers"
+    );
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

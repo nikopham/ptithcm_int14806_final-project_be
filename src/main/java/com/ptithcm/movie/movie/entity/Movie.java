@@ -1,5 +1,8 @@
 package com.ptithcm.movie.movie.entity;
 
+import com.ptithcm.movie.common.constant.AgeRating;
+import com.ptithcm.movie.common.constant.MovieStatus;
+import com.ptithcm.movie.common.constant.VideoUploadStatus;
 import com.ptithcm.movie.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,6 +14,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -51,7 +57,8 @@ public class Movie {
     private Integer durationMin;
 
     @Column(name = "age_rating", length = 8)
-    private String ageRating;
+    @Enumerated(EnumType.STRING)
+    private AgeRating ageRating;
 
     @Column(name = "poster_url")
     private String posterUrl;
@@ -71,8 +78,9 @@ public class Movie {
     @Column(name = "is_series")
     private boolean isSeries;
 
-    @Builder.Default
-    private String status = "PUBLISHED";
+    @Column(name = "status")
+    @Enumerated(EnumType.STRING)
+    private MovieStatus status;
 
     @Column(name = "view_count")
     private Long viewCount;
@@ -88,8 +96,12 @@ public class Movie {
     private BigDecimal imdbScore;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
+    @JoinColumn(name = "created_by", updatable = false)
     private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -98,6 +110,16 @@ public class Movie {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @Column(name = "average_rating", columnDefinition = "numeric")
+    private Double averageRating = 0.0;
+
+    @Column(name = "review_count")
+    private Integer reviewCount = 0;
+
+    @Column(name = "video_status")
+    @Enumerated(EnumType.STRING)
+    private VideoUploadStatus videoStatus;
 
     // --- RELATIONS ---
 

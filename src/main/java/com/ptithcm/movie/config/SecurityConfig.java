@@ -63,17 +63,51 @@ public class SecurityConfig {
                 .sessionManagement(s -> s
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Auth & docs  → public
-                        .requestMatchers("/api/auth/**",
+                        // Public
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/v1/genres/featured",
+                                "/api/v1/movies/top-10",
+                                "/api/v1/genres/get-all",
+                                "/api/v1/countries/get-all",
+                                "/api/v1/movies/search",
+                                "/api/v1/movies/detail/**",
+                                "/api/v1/movies/*/comments",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/users/me").hasAnyAuthority(GlobalConstant.ROLE_VIEWER,
-                                GlobalConstant.ROLE_SUPER_ADMIN, GlobalConstant.ROLE_MOVIE_ADMIN, GlobalConstant.COMMENT_ADMIN)
-                        // TMDB API
-                        .requestMatchers("/api/movies/**", "/api/seasons/**", "/api/genres/**")
-                                .hasAnyAuthority(GlobalConstant.ROLE_MOVIE_ADMIN, GlobalConstant.ROLE_SUPER_ADMIN)
-                        .anyRequest().authenticated())
+                                "/v3/api-docs/**"
+                        ).permitAll()
+
+                        // Viewer + các admin: xem thông tin user, list phim đã like
+                        .requestMatchers(
+                                "/api/users/me",
+                                "/api/v1/movies/search-liked",
+                                "/api/v1/comments/**",
+                                "/api/v1/movies/like/**"
+                        ).hasAnyAuthority(
+                                GlobalConstant.ROLE_VIEWER,
+                                GlobalConstant.ROLE_SUPER_ADMIN,
+                                GlobalConstant.ROLE_MOVIE_ADMIN,
+                                GlobalConstant.ROLE_COMMENT_ADMIN
+                        )
+
+                        .requestMatchers(
+                                "/api/v1/reviews/add",
+                                "/api/v1/reviews/update/**"
+
+                        ).hasAnyAuthority(GlobalConstant.ROLE_VIEWER)
+
+                        .requestMatchers(
+                                "/api/v1/movies/**",
+                                "/api/v1/upload/**",
+                                "/api/v1/seasons/**",
+                                "/api/v1/genres/**"
+                        ).hasAnyAuthority(GlobalConstant.ROLE_MOVIE_ADMIN, GlobalConstant.ROLE_SUPER_ADMIN)
+
+                        .requestMatchers("/api/v1/**")
+                            .hasAuthority(GlobalConstant.ROLE_SUPER_ADMIN)
+
+                        .anyRequest().authenticated()
+                )
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> {
                             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

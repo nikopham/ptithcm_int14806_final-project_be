@@ -171,7 +171,7 @@ public class AuthService {
                     .build());
 
             user.setUsername(r.name());
-            user.setActive(true);
+            user.setActive(false);
             user.setPasswordHash(encoder.encode(r.password()));
             if (user.getRole() == null) user.setRole(viewerRole);
             userRepo.save(user);
@@ -187,7 +187,7 @@ public class AuthService {
                     .passwordHash(encoder.encode(r.password()))
                     .emailVerified(false)
                     .role(viewerRole)
-                    .isActive(true)
+                    .isActive(false)
                     .build());
 
             VerificationToken vt = tokenRepo.save(VerificationToken.builder()
@@ -224,6 +224,7 @@ public class AuthService {
 
         /* cập nhật trạng thái */
         user.setEmailVerified(true);
+        user.setActive(true);
         userRepo.save(user);
         tokenRepo.delete(vt);
 
@@ -255,54 +256,70 @@ public class AuthService {
 
     /* ------------ LOGIN ------------ */
     public ServiceResult login(LoginRequest r,
-                               HttpServletResponse res,
+
                                String userAgent) {
 
-        /* 1. Kiểm tra email + mật khẩu */
+        // 1. Kiểm tra email (Tìm user)
         User user = userRepo.findByEmailIgnoreCase(r.email()).orElse(null);
+
+        // Check password
         if (user == null || !encoder.matches(r.password(), user.getPasswordHash()))
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message(ErrorMessage.BAD_CREDENTIALS);
+                    .message("Email hoặc mật khẩu không chính xác"); // Message thân thiện hơn
 
-        /* 2. Chưa xác minh email */
+        // 2. Check trạng thái
         if (Boolean.FALSE.equals(user.isEmailVerified()))
             return ServiceResult.Failure()
                     .code(ErrorCode.EMAIL_NOT_VERIFIED)
-                    .message(ErrorMessage.EMAIL_NOT_VERIFIED);
+                    .message("Vui lòng xác thực email trước khi đăng nhập");
 
-        /* 3. Tạo session-ID (JTI) trong Redis, để có thể revoke */
-        UUID jti = sessionSvc.createSession(user.getId(), userAgent);  // -> lưu TTL = refresh-ttl
+        if (Boolean.FALSE.equals(user.isActive()))
+            return ServiceResult.Failure()
+                    .code(ErrorCode.BANNED_ACCOUNT)
+                    .message("Tài khoản của bạn đã bị khóa");
 
-        /* 4. Sinh JWT */
+        UUID jti = sessionSvc.createSession(user.getId(), userAgent);
+
         String accessToken  = jwtProvider.generateAccessToken(new UserPrincipal(user));
         String refreshToken = jwtProvider.generateRefreshToken(user.getId(), jti);
 
-        /* 5. Ghi Refresh-token vào cookie HttpOnly */
-        ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), refreshToken)
-                .httpOnly(true)
-                .secure(true)                      // HTTPS prod
-                .path("/api/auth/refresh")         // chỉ gửi cookie cho endpoint refresh
-                .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
-                .sameSite("Lax")
-                .build();
-        res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+//        boolean isSecure = jwtConfig.isCookieSecure();
+//
+//        ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), refreshToken)
+//                .httpOnly(true)
+//                .secure(isSecure)
+//                .path("/api/auth/refresh")
+//                .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
+//                .sameSite("Lax")
+//                .build();
+//
+//        res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
         List<String> listRoles = new ArrayList<>();
-        listRoles.add(user.getRole().getCode());
-        /* 6. Trả access-token về body */
+        if (user.getRole() != null) {
+            listRoles.add(user.getRole().getCode());
+        }
+
         AuthResponse payload = new AuthResponse(
                 accessToken,
                 user.getUsername(),
                 user.getAvatarUrl(),
                 listRoles
         );
+
+        LoginResult result = LoginResult.builder()
+                .refreshToken(refreshToken)
+                .authResponse(payload)
+                .build();
+
         return ServiceResult.Success()
                 .code(ErrorCode.SUCCESS)
                 .message("Đăng nhập thành công")
-                .data(payload);
+                .data(result);
     }
 
-    public ServiceResult refreshTokens(String refreshToken, HttpServletResponse res) {
+    public ServiceResult refreshTokens(String refreshToken) {
 
         if (refreshToken == null) {
             return ServiceResult.Failure()
@@ -324,27 +341,37 @@ public class AuthService {
             }
 
             /* Phát Access mới */
-            User user = userRepo.findById(userId).orElseThrow();
+            User user = userRepo.findById(userId).orElse(null);
+            if (user == null) {
+                return ServiceResult.Failure()
+                        .code(ErrorCode.BAD_CREDENTIALS)
+                        .message("Người dùng không tồn tại");
+            }
             String newAccess = jwtProvider.generateAccessToken(new UserPrincipal(user));
 
             /* Rotate refresh-token (same jti) */
             String newRefresh = jwtProvider.generateRefreshToken(userId, jti);
-            ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), newRefresh)
-                    .httpOnly(true).secure(true).path("/api/auth/refresh")
-                    .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
-                    .sameSite("Lax").build();
-            res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+//            ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), newRefresh)
+//                    .httpOnly(true).secure(jwtConfig.isCookieSecure()).path("/api/auth/refresh")
+//                    .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
+//                    .sameSite("Lax").build();
+//            res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
             List<String> listRoles = new ArrayList<>();
             listRoles.add(user.getRole().getCode());
+
             AuthResponse payload = new AuthResponse(
                     newAccess,
                     user.getUsername(),
                     user.getAvatarUrl(),
                     listRoles
             );
+            LoginResult result = LoginResult.builder()
+                    .refreshToken(newRefresh)
+                    .authResponse(payload)
+                    .build();
             return ServiceResult.Success()
-                    .code(ErrorCode.SUCCESS)
-                    .data(payload);
+                    .data(result)
+                    .code(ErrorCode.SUCCESS);
 
         } catch (JWTVerificationException ex) {
             return ServiceResult.Failure()

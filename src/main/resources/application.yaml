@@ -73,7 +73,13 @@ app:
     access-ttl-min: 15
     refresh-ttl-day: 7
     refresh-cookie: refresh_token
+    cookie-secure: false
   cors:
     allowed-origins:
       - http://localhost:5173         # Vite dev
       - https://my-movie-frontend.com
+
+
+cloudflare:
+  account-id: 2e15027f24f02f2b4247d94a5c16c3e2
+  api-token: _idby8LY-4T6tsk4cMa9jGCG1qP8-nGWQZQAYfu-
