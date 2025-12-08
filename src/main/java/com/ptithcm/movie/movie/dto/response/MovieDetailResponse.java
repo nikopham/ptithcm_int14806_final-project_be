@@ -34,6 +34,7 @@ public class MovieDetailResponse {
     private Double averageRating;
     private Integer reviewCount;
     private Long viewCount;
+    private String videoUrl;
 
 
     // --- 4. Relationships ---
@@ -61,6 +62,7 @@ public class MovieDetailResponse {
         private Integer episodeNumber;
         private String title;
         private Integer durationMin;
+        private String videoUrl;
         private String synopsis;
         private String stillPath;
         private LocalDate airDate;

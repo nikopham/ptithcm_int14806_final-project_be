@@ -39,4 +39,10 @@ public interface GenreRepository extends JpaRepository<Genre, Integer>, JpaSpeci
     @Modifying
     @Query(value = "DELETE FROM movie_genres WHERE genre_id = :genreId", nativeQuery = true)
     void deleteMovieGenreRelations(@Param("genreId") Integer genreId);
+
+    @Query("SELECT DISTINCT g FROM Movie m " +
+            "JOIN m.genres g " +
+            "WHERE m.status = 'PUBLISHED' " +
+            "ORDER BY g.name ASC")
+    List<Genre> findAllWithPublishedMovies();
 }

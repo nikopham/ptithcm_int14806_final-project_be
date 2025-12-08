@@ -15,6 +15,7 @@ public class UserProfileResponse {
     private final String email;
     private final String avatarUrl;
     private final List<String> roles;
+    private boolean hasPassword;
 
     public UserProfileResponse(User user) {
         this.id        = user.getId().toString();
@@ -22,5 +23,7 @@ public class UserProfileResponse {
         this.email     = user.getEmail();
         this.avatarUrl = user.getAvatarUrl();
         this.roles     = List.of(user.getRole().getCode());
+
+        this.hasPassword = user.getPasswordHash() != null && !user.getPasswordHash().isEmpty();
     }
 }

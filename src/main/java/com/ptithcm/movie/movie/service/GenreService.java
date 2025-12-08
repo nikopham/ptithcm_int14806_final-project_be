@@ -34,6 +34,14 @@ public class GenreService {
     private final GenreRepository genreRepository;
     private final MovieRepository movieRepository;
 
+    public ServiceResult getPublishedGenres() {
+        List<Genre> genres = genreRepository.findAllWithPublishedMovies();
+        List<GenreResponse> response = genres.stream()
+                .map(g -> new GenreResponse(g.getId(), g.getName(), 0L))
+                .toList();
+        return ServiceResult.Success().data(response);
+    }
+
     public ServiceResult searchGenres(GenreSearchRequest request, Pageable pageable) {
         try {
             Specification<Genre> spec = createGenreSpec(request);

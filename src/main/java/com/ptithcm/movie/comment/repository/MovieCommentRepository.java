@@ -4,6 +4,7 @@ import com.ptithcm.movie.comment.entity.MovieComment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface MovieCommentRepository extends JpaRepository<MovieComment, UUID> {
+public interface MovieCommentRepository extends JpaRepository<MovieComment, UUID>, JpaSpecificationExecutor<MovieComment> {
     boolean existsByMovieId(UUID movieId);
 
     @Query("SELECT c.user.id, COUNT(DISTINCT c.movie.id) " +
@@ -31,6 +32,7 @@ public interface MovieCommentRepository extends JpaRepository<MovieComment, UUID
 
     @Query("SELECT c FROM MovieComment c " +
             "JOIN FETCH c.user u " +
+            "LEFT JOIN FETCH u.role " +
             "WHERE c.movie.id = :movieId " +
 
             "AND c.isHidden = false " +

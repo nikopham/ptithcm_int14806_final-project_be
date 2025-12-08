@@ -36,10 +36,21 @@ public class ViewingHistory {
     @Column(name = "watched_seconds")
     private Integer watchedSeconds;
 
+    @Column(name = "total_seconds") // Tổng thời lượng phim (để tính %)
+    private Integer totalSeconds;
+
+    @Column(name = "last_watched_at")
+    private OffsetDateTime lastWatchedAt;
+
     @Builder.Default
     private boolean finished = false;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    public double getProgressPercent() {
+        if (totalSeconds == null || totalSeconds == 0) return 0.0;
+        return (double) watchedSeconds / totalSeconds * 100.0;
+    }
 }

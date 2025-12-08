@@ -3,10 +3,15 @@ package com.ptithcm.movie.movie.service;
 import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.external.cloudinary.CloudinaryService;
+import com.ptithcm.movie.external.meili.SearchService;
 import com.ptithcm.movie.movie.dto.request.PersonRequest;
 import com.ptithcm.movie.movie.dto.request.PersonSearchRequest;
+import com.ptithcm.movie.movie.dto.response.MovieSearchResponse;
+import com.ptithcm.movie.movie.dto.response.PersonDetailResponse;
 import com.ptithcm.movie.movie.dto.response.PersonResponse;
+import com.ptithcm.movie.movie.entity.Movie;
 import com.ptithcm.movie.movie.entity.Person;
+import com.ptithcm.movie.movie.repository.MovieRepository;
 import com.ptithcm.movie.movie.repository.PersonRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +31,49 @@ public class PersonService {
 
     private final PersonRepository personRepository;
     private final CloudinaryService cloudinaryService;
+    private final SearchService searchService;
+    private final MovieRepository movieRepository;
+
+    @Transactional(readOnly = true)
+    public ServiceResult getPersonDetail(UUID personId, Pageable pageable) {
+        Person person = personRepository.findById(personId)
+                .orElseThrow(() -> new RuntimeException("Person not found"));
+
+
+        Page<Movie> moviePage = movieRepository.findByPersonId(personId, pageable);
+
+        Page<MovieSearchResponse> movieDtos = moviePage.map(movie -> MovieSearchResponse.builder()
+                .id(movie.getId())
+                .title(movie.getTitle())
+                .originalTitle(movie.getOriginalTitle())
+                .description(movie.getDescription())
+                .slug(movie.getSlug())
+
+                .posterUrl(movie.getPosterUrl())
+                .backdropUrl(movie.getBackdropUrl())
+
+                .releaseDate(movie.getReleaseDate())
+                .releaseYear(movie.getReleaseDate() != null ? movie.getReleaseDate().getYear() : null)
+                .durationMin(movie.getDurationMin())
+                .ageRating(String.valueOf(movie.getAgeRating()))
+                .quality(movie.getQuality())
+                .status(String.valueOf(movie.getStatus()))
+                .isSeries(movie.isSeries())
+                .build());
+
+        PersonDetailResponse response = PersonDetailResponse.builder()
+                .id(person.getId())
+                .fullName(person.getFullName())
+                .biography(person.getBiography())
+                .birthDate(person.getBirthDate())
+                .placeOfBirth(person.getPlaceOfBirth())
+                .profilePath(person.getProfilePath())
+                .job(person.getJob())
+                .movies(movieDtos)
+                .build();
+
+        return ServiceResult.Success().data(response);
+    }
 
     public ServiceResult searchPeople(PersonSearchRequest request, Pageable pageable) {
         Specification<Person> spec = (root, query, cb) -> {
@@ -95,6 +143,7 @@ public class PersonService {
                     .build();
 
             Person savedPerson = personRepository.save(person);
+            searchService.indexPerson(savedPerson);
 
             return ServiceResult.Success().code(ErrorCode.SUCCESS)
                     .message("Create person successfully")
@@ -121,6 +170,8 @@ public class PersonService {
 
             Person updatedPerson = personRepository.save(person);
 
+            searchService.indexPerson(updatedPerson);
+
             return ServiceResult.Success().code(ErrorCode.SUCCESS)
                     .message("Update person successfully")
                     .data(updatedPerson);
@@ -143,6 +194,8 @@ public class PersonService {
         }
 
         personRepository.delete(person);
+
+        searchService.removePerson(id);
 
         return ServiceResult.Success()
                 .message("Person deleted successfully");

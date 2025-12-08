@@ -23,7 +23,7 @@ public class MovieSearchResponse {
     private String posterUrl;
     private String backdropUrl;
 
-
+    private String videoUrl;
     private LocalDate releaseDate;
     private Integer releaseYear;
     private Integer durationMin;

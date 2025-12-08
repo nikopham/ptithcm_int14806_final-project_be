@@ -43,6 +43,7 @@ public class MovieInfoResponse {
     private String trailerUrl;
     private String slug;
     private boolean isSeries;
+    private String videoUrl;
     private List<SeasonDto> seasons;
 
     @Data

@@ -489,7 +489,7 @@ public class UserService {
             return ServiceResult.Failure().code(ErrorCode.BAD_CREDENTIALS).message("Can't find user");
         }
 
-        if (!passwordEncoder.matches(request.getCurrentPw(), currentUser.getPasswordHash())) {
+        if ( currentUser.getPasswordHash() != null && !passwordEncoder.matches(request.getCurrentPw(), currentUser.getPasswordHash())) {
             return ServiceResult.Failure().code(400).message("Incorrect current password");
         }
 

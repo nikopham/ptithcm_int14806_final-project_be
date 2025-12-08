@@ -20,4 +20,5 @@ public class CommentResponse {
     private String userAvatar;
 
     private Long replyCount;
+    private String userRole;
 }

@@ -12,4 +12,5 @@ public class EpisodeUpdateRequest {
     private Integer durationMin;
     private String synopsis;
     private LocalDate airDate;
+    private String videoUrl;
 }

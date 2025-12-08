@@ -1,16 +1,16 @@
 package com.ptithcm.movie.movie.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 public class GenreResponse {
     private Integer id;
     private String name;
     private Long movieCount;
+
 }

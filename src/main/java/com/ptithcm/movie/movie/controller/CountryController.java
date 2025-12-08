@@ -17,6 +17,11 @@ public class CountryController {
 
     private final CountryService countryService;
 
+    @GetMapping("/published")
+    public ResponseEntity<ServiceResult> getPublishedCountries() {
+        return ResponseEntity.ok(countryService.getPublishedCountries());
+    }
+
     @GetMapping("/get-all")
     public ResponseEntity<ServiceResult> getAllCountries() {
         return ResponseEntity.ok(countryService.getAllCountries());

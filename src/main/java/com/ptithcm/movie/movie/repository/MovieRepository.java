@@ -2,6 +2,7 @@ package com.ptithcm.movie.movie.repository;
 
 import com.ptithcm.movie.common.constant.MovieStatus;
 import com.ptithcm.movie.movie.entity.Movie;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -54,4 +55,18 @@ public interface MovieRepository extends JpaRepository<Movie, UUID>, JpaSpecific
     boolean existsByUpdatedBy_Id(UUID userId);
 
     Optional<Movie> findByVideoUrlContaining(String videoUid);
+
+    @Query("SELECT DISTINCT m FROM Movie m " +
+            "LEFT JOIN m.actors a " +
+            "LEFT JOIN m.directors d " +
+            "WHERE (a.id = :personId OR d.id = :personId) " +
+            "AND m.status = 'PUBLISHED'")
+    Page<Movie> findByPersonId(@Param("personId") UUID personId, Pageable pageable);
+
+    @Query("SELECT DISTINCT YEAR(m.releaseDate) " +
+            "FROM Movie m " +
+            "WHERE m.status = 'PUBLISHED' " +
+            "AND m.releaseDate IS NOT NULL " +
+            "ORDER BY YEAR(m.releaseDate) DESC")
+    List<Integer> findDistinctReleaseYears();
 }

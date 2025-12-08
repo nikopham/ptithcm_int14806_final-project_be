@@ -73,8 +73,14 @@ public class SecurityConfig {
                                 "/api/v1/movies/search",
                                 "/api/v1/movies/detail/**",
                                 "/api/v1/movies/*/comments",
+                                "/api/v1/search/**",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/api/v1/webhooks/**"
+                                ,"/api/v1/movies/progress",
+                                "/api/v1/countries/published",
+                                "/api/v1/genres/published",
+                                "/api/v1/movies/years"
                         ).permitAll()
 
                         // Viewer + các admin: xem thông tin user, list phim đã like
@@ -82,7 +88,9 @@ public class SecurityConfig {
                                 "/api/users/me",
                                 "/api/v1/movies/search-liked",
                                 "/api/v1/comments/**",
-                                "/api/v1/movies/like/**"
+                                "/api/v1/movies/like/**",
+                                "/api/v1/reviews/add",
+                                "/api/v1/reviews/update/**"
                         ).hasAnyAuthority(
                                 GlobalConstant.ROLE_VIEWER,
                                 GlobalConstant.ROLE_SUPER_ADMIN,

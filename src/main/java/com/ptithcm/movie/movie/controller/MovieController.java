@@ -5,6 +5,7 @@ import com.ptithcm.movie.external.cloudflare.CloudflareService;
 import com.ptithcm.movie.movie.dto.request.MovieCreateRequest;
 import com.ptithcm.movie.movie.dto.request.MovieSearchRequest;
 import com.ptithcm.movie.movie.dto.request.MovieUpdateRequest;
+import com.ptithcm.movie.movie.dto.request.WatchProgressRequest;
 import com.ptithcm.movie.movie.service.MovieService;
 import com.ptithcm.movie.movie.service.ReviewService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -25,6 +27,11 @@ public class MovieController {
     private final MovieService movieService;
     private final ReviewService reviewService;
     private final CloudflareService cloudflareService;
+
+    @GetMapping("/years")
+    public ResponseEntity<ServiceResult> getReleaseYears() {
+        return ResponseEntity.ok(movieService.getReleaseYears());
+    }
 
     @GetMapping("/search")
     public ResponseEntity<ServiceResult> searchMovies(
@@ -98,5 +105,19 @@ public class MovieController {
     @GetMapping("/video-status/{videoUid}")
     public ResponseEntity<ServiceResult> getVideoStatus(@PathVariable String videoUid) {
         return ResponseEntity.ok(movieService.checkAndSyncVideoStatus(videoUid));
+    }
+
+    @PostMapping("/progress")
+    public ResponseEntity<Void> saveProgress(@RequestBody WatchProgressRequest request) {
+        movieService.saveProgress(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/watched")
+    public ResponseEntity<ServiceResult> getWatchedMovies(
+            @ModelAttribute MovieSearchRequest request,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(movieService.searchWatchedMovies(request, pageable));
     }
 }

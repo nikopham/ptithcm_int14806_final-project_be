@@ -1,6 +1,7 @@
 package com.ptithcm.movie.comment.controller;
 
 import com.ptithcm.movie.comment.dto.request.CommentRequest;
+import com.ptithcm.movie.comment.dto.request.CommentSearchRequest;
 import com.ptithcm.movie.comment.service.CommentService;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import jakarta.validation.Valid;
@@ -29,6 +30,14 @@ public class CommentController {
         return ResponseEntity.ok(commentService.getCommentsByMovie(movieId, pageable));
     }
 
+    @GetMapping("/comments/search")
+    public ResponseEntity<ServiceResult> searchComments(
+            @ModelAttribute CommentSearchRequest request,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(commentService.searchComments(request, pageable));
+    }
+
     @PostMapping("/comments")
     public ResponseEntity<ServiceResult> createComment(
             @RequestBody @Valid CommentRequest request
@@ -42,5 +51,10 @@ public class CommentController {
             @RequestBody @Valid CommentRequest request
     ) {
         return ResponseEntity.ok(commentService.editComment(id, request));
+    }
+
+    @PatchMapping("/comments/{id}/toggle-hidden")
+    public ResponseEntity<ServiceResult> toggleHidden(@PathVariable UUID id) {
+        return ResponseEntity.ok(commentService.toggleHidden(id));
     }
 }

@@ -2,6 +2,7 @@ package com.ptithcm.movie.auth.controller;
 
 import com.ptithcm.movie.auth.dto.*;
 import com.ptithcm.movie.auth.service.AuthService;
+import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.config.JwtConfig;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,6 +51,15 @@ public class AuthController {
         }
 
         LoginResult loginData = (LoginResult) result.getData();
+        AuthResponse authResponse = loginData.getAuthResponse();
+
+        ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), authResponse.getAccessToken())
+                .httpOnly(true)
+                .secure(jwtConfig.isCookieSecure()) // true nếu chạy HTTPS
+                .path("/")
+                .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin())) // VD: 30 phút (Khớp với thời gian hết hạn của JWT)
+                .sameSite("Lax") // Chống CSRF cơ bản
+                .build();
 
         ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginData.getRefreshToken())
                 .httpOnly(true)
@@ -59,10 +69,13 @@ public class AuthController {
                 .sameSite("Lax")
                 .build();
 
+        authResponse.setAccessToken("");
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, String.valueOf(cookie))
+                .header(HttpHeaders.SET_COOKIE, String.valueOf(accessCookie))
                 .body(ServiceResult.Success()
-                        .data(loginData.getAuthResponse()));
+                        .data(authResponse));
     }
 
     @PostMapping("/refresh")
@@ -80,6 +93,14 @@ public class AuthController {
         }
 
         LoginResult loginData = (LoginResult) result.getData();
+        AuthResponse authResponse = loginData.getAuthResponse();
+        ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), authResponse.getAccessToken())
+                .httpOnly(true)
+                .secure(jwtConfig.isCookieSecure()) // true nếu chạy HTTPS
+                .path("/")
+                .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin())) // VD: 30 phút (Khớp với thời gian hết hạn của JWT)
+                .sameSite("Lax") // Chống CSRF cơ bản
+                .build();
 
         ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginData.getRefreshToken())
             .httpOnly(true)
@@ -89,10 +110,13 @@ public class AuthController {
             .sameSite("Lax")
             .build();
 
+        authResponse.setAccessToken("");
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, String.valueOf(cookie))
+                .header(HttpHeaders.SET_COOKIE, String.valueOf(accessCookie))
                 .body(ServiceResult.Success()
-                        .data(loginData.getAuthResponse()));
+                        .data(authResponse));
     }
 
     @PostMapping("/logout")
@@ -119,5 +143,48 @@ public class AuthController {
     @PostMapping("/reset")
     public ServiceResult reset(@RequestBody ResetPasswordRequest req) {
         return authService.resetPassword(req);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<ServiceResult> loginByGoogle(
+            @RequestBody GoogleLoginRequest request,
+            HttpServletRequest servletRequest,
+            HttpServletResponse response
+    ) {
+        // 1. Lấy User-Agent để tạo Session
+        String userAgent = servletRequest.getHeader(HttpHeaders.USER_AGENT);
+
+        // 2. Gọi Service xử lý logic
+        ServiceResult result = authService.loginByGoogle(request, userAgent);
+
+        // 3. Nếu thành công -> Set HttpOnly Cookie cho Refresh Token
+        AuthResponse authResponse = new AuthResponse();
+        if (result.getCode() == ErrorCode.SUCCESS) {
+            LoginResult loginResult = (LoginResult) result.getData();
+
+            authResponse = loginResult.getAuthResponse();
+            ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), authResponse.getAccessToken())
+                    .httpOnly(true)
+                    .secure(jwtConfig.isCookieSecure()) // true nếu chạy HTTPS
+                    .path("/")
+                    .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin())) // VD: 30 phút (Khớp với thời gian hết hạn của JWT)
+                    .sameSite("Lax") // Chống CSRF cơ bản
+                    .build();
+
+            // Tạo Cookie (Logic này y hệt hàm login thường của bạn)
+            ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginResult.getRefreshToken())
+                    .httpOnly(true)
+                    .secure(jwtConfig.isCookieSecure()) // True nếu chạy https
+                    .path("/api/auth/refresh")
+                    .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
+                    .sameSite("Lax") // Hoặc "None" nếu Frontend/Backend khác domain
+                    .build();
+
+            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, String.valueOf(accessCookie));
+        }
+        authResponse.setAccessToken("");
+        return ResponseEntity.ok(ServiceResult.Success()
+                .data(authResponse));
     }
 }

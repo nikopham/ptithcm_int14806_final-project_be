@@ -1,5 +1,18 @@
 package com.ptithcm.movie.auth.dto;
 
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 
-public record AuthResponse(String accessToken, String username, String avatarUrl, List<String> roles) {}
+@Data
+@Setter
+@Getter
+public class AuthResponse {
+
+    private String accessToken;
+    private String username;
+    private String avatarUrl;
+    private List<String> roles;
+}

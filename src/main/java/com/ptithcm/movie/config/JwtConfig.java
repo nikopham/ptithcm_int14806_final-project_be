@@ -14,5 +14,6 @@ public class JwtConfig {
     private long  accessTtlMin;     // 15
     private long  refreshTtlDay;    // 7
     private String refreshCookie;   // "refresh_token"
+    private String accessCookie;    // "access_token"
     private boolean cookieSecure;
 }

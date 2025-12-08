@@ -2,19 +2,24 @@ package com.ptithcm.movie.comment.service;
 
 import com.ptithcm.movie.auth.security.UserPrincipal;
 import com.ptithcm.movie.comment.dto.request.CommentRequest;
+import com.ptithcm.movie.comment.dto.request.CommentSearchRequest;
 import com.ptithcm.movie.comment.dto.response.CommentResponse;
+import com.ptithcm.movie.comment.dto.response.CommentSearchResponse;
 import com.ptithcm.movie.comment.entity.MovieComment;
 import com.ptithcm.movie.comment.repository.MovieCommentRepository;
 import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.movie.entity.Movie;
 import com.ptithcm.movie.movie.repository.MovieRepository;
-import com.ptithcm.movie.user.dto.UserProfileResponse;
+import com.ptithcm.movie.user.entity.Role;
 import com.ptithcm.movie.user.entity.User;
 import com.ptithcm.movie.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +60,7 @@ public class CommentService {
                 .userId(c.getUser().getId())
                 .username(c.getUser().getUsername())
                 .userAvatar(c.getUser().getAvatarUrl())
+                .userRole(c.getUser().getRole() != null ? c.getUser().getRole().getCode() : "viewer")
                 // Reply Count
                 .replyCount(replyCounts.getOrDefault(c.getId(), 0L))
                 .build());
@@ -64,7 +70,81 @@ public class CommentService {
                 .data(response);
     }
 
+    // New: search comments across criteria
+    @Transactional(readOnly = true)
+    public ServiceResult searchComments(CommentSearchRequest request, Pageable pageable) {
+        Specification<MovieComment> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
 
+            if (request.getUserId() != null) {
+                predicates.add(cb.equal(root.get("user").get("id"), request.getUserId()));
+            }
+            if (request.getMovieId() != null) {
+                predicates.add(cb.equal(root.get("movie").get("id"), request.getMovieId()));
+            }
+            if (request.getIsHidden() != null) {
+                predicates.add(cb.equal(root.get("isHidden"), request.getIsHidden()));
+            }
+            if (request.getMovieTitle() != null && !request.getMovieTitle().isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("movie").get("title")), "%" + request.getMovieTitle().toLowerCase() + "%"));
+            }
+            if (request.getFrom() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), request.getFrom()));
+            }
+            if (request.getTo() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), request.getTo()));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        Page<MovieComment> page = commentRepository.findAll(spec, sortedPageable);
+
+        // Batch reply counts for returned page
+        List<UUID> parentIds = page.getContent().stream().map(MovieComment::getId).toList();
+        Map<UUID, Long> replyCounts = new HashMap<>();
+        if (!parentIds.isEmpty()) {
+            for (Object[] row : commentRepository.countRepliesByParentIds(parentIds)) {
+                replyCounts.put((UUID) row[0], (Long) row[1]);
+            }
+        }
+
+
+
+
+        Page<CommentSearchResponse> responsePage = page.map(c -> CommentSearchResponse.builder()
+                .id(c.getId())
+                .body(c.getBody())
+                .createdAt(c.getCreatedAt())
+                .isEdited(c.isEdited())
+                .isHidden(c.isHidden())
+                .parentId(c.getParent() != null ? c.getParent().getId() : null)
+                .userId(c.getUser().getId())
+                .username(c.getUser().getUsername())
+                .userAvatar(c.getUser().getAvatarUrl())
+                .userRole(c.getUser().getRole() != null ? c.getUser().getRole().getCode() : "viewer")
+                .replyCount(replyCounts.getOrDefault(c.getId(), 0L))
+                .movie(CommentSearchResponse.MovieInfo.builder()
+                        .id(c.getMovie().getId())
+                        .title(c.getMovie().getTitle())
+                        .originalTitle(c.getMovie().getOriginalTitle())
+                        .slug(c.getMovie().getSlug())
+                        .posterUrl(c.getMovie().getPosterUrl())
+                        .backdropUrl(c.getMovie().getBackdropUrl())
+                        .releaseYear(c.getMovie().getReleaseDate() != null ? c.getMovie().getReleaseDate().getYear() : null)
+                        .isSeries(c.getMovie().isSeries())
+                        .build())
+                .build());
+
+
+        return ServiceResult.Success()
+                .code(ErrorCode.SUCCESS)
+                .data(responsePage);
+    }
 
     private User getCurrentUser() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -86,6 +166,7 @@ public class CommentService {
         }
         return null;
     }
+
     @Transactional
     public ServiceResult createComment(CommentRequest request) {
         User currentUser = getCurrentUser();
@@ -131,9 +212,6 @@ public class CommentService {
             comment.setParent(parent);
         }
 
-        // 3. AI Analysis Placeholder (Phân tích độc hại)
-        // analyzeAndSetToxicStatus(comment);
-
         MovieComment savedComment = commentRepository.save(comment);
 
         return ServiceResult.Success()
@@ -141,7 +219,6 @@ public class CommentService {
                 .data(mapToCommentResponse(savedComment));
     }
 
-    // --- 2. EDIT COMMENT ---
     @Transactional
     public ServiceResult editComment(UUID commentId, CommentRequest request) {
         User currentUser = getCurrentUser();
@@ -164,13 +241,40 @@ public class CommentService {
                 .data(mapToCommentResponse(updatedComment));
     }
 
-    // --- Helper Map ---
+    // New: toggle isHidden for a comment (admin or owner)
+    @Transactional
+    public ServiceResult toggleHidden(UUID commentId) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return ServiceResult.Failure().code(ErrorCode.UNAUTHORIZED).message("Unauthorized");
+
+        MovieComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        boolean isOwner = comment.getUser().getId().equals(currentUser.getId());
+        Role role = currentUser.getRole();
+        boolean isAdmin = role != null && (role.getCode().equals("super_admin") || role.getCode().equals("comment_admin"));
+
+        if (!isOwner && !isAdmin) {
+            return ServiceResult.Failure().code(ErrorCode.FORBIDDEN).message("You don't have permission to toggle this comment");
+        }
+
+        comment.setHidden(!comment.isHidden());
+        commentRepository.save(comment);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", comment.getId());
+        data.put("isHidden", comment.isHidden());
+
+        return ServiceResult.Success().message("Toggled hidden state").data(data);
+    }
+
     private CommentResponse mapToCommentResponse(MovieComment c) {
         return CommentResponse.builder()
                 .id(c.getId())
                 .body(c.getBody())
                 .createdAt(c.getCreatedAt())
                 .isEdited(c.isEdited())
+                .parentId(c.getParent() != null ? c.getParent().getId() : null)
                 .userId(c.getUser().getId())
                 .username(c.getUser().getUsername())
                 .userAvatar(c.getUser().getAvatarUrl())
@@ -178,7 +282,6 @@ public class CommentService {
                 .build();
     }
 
-    // --- Helper AI (Mock) ---
     private void analyzeAndSetToxicStatus(MovieComment comment) {
         // Gọi API AI Server (Python) hoặc thư viện
         // double score = aiService.analyze(comment.getBody());

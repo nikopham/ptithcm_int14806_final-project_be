@@ -19,6 +19,11 @@ public class GenreController {
 
     private final GenreService genreService;
 
+    @GetMapping("/published")
+    public ResponseEntity<ServiceResult> getPublishedGenres() {
+        return ResponseEntity.ok(genreService.getPublishedGenres());
+    }
+
     @GetMapping("/search")
     public ResponseEntity<ServiceResult> searchGenres(
             @ModelAttribute GenreSearchRequest request,

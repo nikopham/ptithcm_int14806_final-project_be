@@ -14,4 +14,5 @@ public class MovieSearchRequest {
     private MovieStatus status;  // Lọc trạng thái (VD: chỉ lấy PUBLISHED)
     private List<Integer> genreIds;   // Thay vì Integer genreId
     private List<Integer> countryIds;
+    private Integer releaseYear;
 }

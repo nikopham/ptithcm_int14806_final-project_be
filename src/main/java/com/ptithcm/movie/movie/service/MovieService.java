@@ -9,9 +9,11 @@ import com.ptithcm.movie.common.constant.VideoUploadStatus;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.external.cloudflare.CloudflareService;
 import com.ptithcm.movie.external.cloudinary.CloudinaryService;
+import com.ptithcm.movie.external.meili.SearchService;
 import com.ptithcm.movie.movie.dto.request.MovieCreateRequest;
 import com.ptithcm.movie.movie.dto.request.MovieSearchRequest;
 import com.ptithcm.movie.movie.dto.request.MovieUpdateRequest;
+import com.ptithcm.movie.movie.dto.request.WatchProgressRequest;
 import com.ptithcm.movie.movie.dto.response.*;
 import com.ptithcm.movie.movie.entity.*;
 import com.ptithcm.movie.movie.repository.*;
@@ -19,6 +21,7 @@ import com.ptithcm.movie.user.entity.User;
 import com.ptithcm.movie.user.repository.UserRepository;
 import jakarta.persistence.criteria.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,11 +33,13 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MovieService {
 
     private final MovieRepository movieRepository;
@@ -49,6 +54,40 @@ public class MovieService {
     private final UserRepository userRepository;
     private final MovieLikeRepository movieLikeRepository;
     private final CloudflareService cloudflareService;
+    private final SearchService searchService;
+    private final EpisodeRepository episodeRepository;
+
+    @Transactional
+    public void saveProgress(WatchProgressRequest request) {
+        User user = getCurrentUser();
+        if (user == null) return;
+
+        ViewingHistory history = historyRepository
+                .findByUserIdAndMovieIdAndEpisodeId(user.getId(), request.getMovieId(), request.getEpisodeId())
+                .orElse(null);
+
+        if (history == null) {
+            Movie movie = movieRepository.getReferenceById(request.getMovieId());
+            Episode episode = request.getEpisodeId() != null ? episodeRepository.getReferenceById(request.getEpisodeId()) : null;
+
+            history = ViewingHistory.builder()
+                    .user(user)
+                    .movie(movie)
+                    .episode(episode)
+                    .build();
+        }
+
+        history.setWatchedSeconds(request.getWatchedSeconds());
+        history.setTotalSeconds(request.getTotalSeconds());
+        history.setLastWatchedAt(OffsetDateTime.now());
+
+        historyRepository.save(history);
+    }
+
+    public ServiceResult getReleaseYears() {
+        List<Integer> years = movieRepository.findDistinctReleaseYears();
+        return ServiceResult.Success().data(years);
+    }
 
     @Transactional
     public ServiceResult deleteMovie(UUID id) {
@@ -76,6 +115,8 @@ public class MovieService {
         movieRepository.delete(movie);
 
         movieRepository.flush();
+
+        searchService.removeMovie(id);
 
         CompletableFuture.runAsync(() -> {
             cloudinaryService.deleteImage(posterUrl);
@@ -159,6 +200,7 @@ public class MovieService {
             }
 
             Movie updatedMovie = movieRepository.save(movie);
+            searchService.indexMovie(updatedMovie);
             return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Movie updated successfully");
 
         } catch (IOException e) {
@@ -254,7 +296,7 @@ public class MovieService {
                 .genres(genres)
                 .director(directorDto)
                 .actors(actors)
-
+                .videoUrl(movie.getVideoUrl())
                 .posterUrl(movie.getPosterUrl())
                 .backdropUrl(movie.getBackdropUrl())
 
@@ -288,7 +330,7 @@ public class MovieService {
 
                         .posterUrl(movie.getPosterUrl())
                         .backdropUrl(movie.getBackdropUrl())
-
+                        .videoUrl(movie.getVideoUrl())
                         .releaseDate(movie.getReleaseDate())
                         .releaseYear(movie.getReleaseDate() != null ? movie.getReleaseDate().getYear() : null)
                         .durationMin(movie.getDurationMin())
@@ -323,6 +365,7 @@ public class MovieService {
                         cb.like(cb.lower(root.get("originalTitle")), searchKey)
                 ));
             }
+            predicates.add(cb.equal(root.get("status"), MovieStatus.PUBLISHED));
 
             if (request.getIsSeries() != null) {
                 predicates.add(cb.equal(root.get("isSeries"), request.getIsSeries()));
@@ -345,6 +388,14 @@ public class MovieService {
             if (request.getCountryIds() != null && !request.getCountryIds().isEmpty()) {
                 Join<Movie, Country> countryJoin = root.join("countries", JoinType.INNER);
                 predicates.add(countryJoin.get("id").in(request.getCountryIds()));
+            }
+
+            if (request.getReleaseYear() != null) {
+                int year = request.getReleaseYear();
+                LocalDate startOfYear = LocalDate.of(year, 1, 1);
+                LocalDate endOfYear = LocalDate.of(year, 12, 31);
+
+                predicates.add(cb.between(root.get("releaseDate"), startOfYear, endOfYear));
             }
 
             if (userId != null) {
@@ -421,6 +472,8 @@ public class MovieService {
             }
 
             Movie savedMovie = movieRepository.save(movie);
+
+            searchService.indexMovie(savedMovie);
 
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
@@ -523,6 +576,7 @@ public class MovieService {
                                     .episodeNumber(ep.getEpisodeNumber())
                                     .title(ep.getTitle())
                                     .durationMin(ep.getDurationMin())
+                                    .videoUrl(ep.getVideoUrl())
                                     .synopsis(ep.getSynopsis())
                                     .stillPath(ep.getStillPath())
                                     .airDate(ep.getAirDate())
@@ -573,7 +627,7 @@ public class MovieService {
                 .averageRating(avgRating)
                 .viewCount(movie.getViewCount())
                 .reviewCount((int) reviewCount)
-
+                .videoUrl(movie.getVideoUrl())
                 .genres(genreDtos)
                 .countries(countryDtos)
                 .actors(actorDtos)
@@ -702,33 +756,106 @@ public class MovieService {
 
 
     public ServiceResult checkAndSyncVideoStatus(String videoUid) {
+        // 1. Gọi Cloudflare
         Map<String, Object> cfInfo = cloudflareService.getVideoDetails(videoUid);
-        String state = (String) cfInfo.get("state"); // "ready", "inprogress"...
+        String state = (String) cfInfo.get("state");
+        int height = (int) cfInfo.get("height");
 
-        Movie movie = movieRepository.findByVideoUrlContaining(videoUid).orElse(null);
+        // 2. Nếu READY -> Update Database
+        if ("ready".equalsIgnoreCase(state)) {
+            String hlsUrl = String.format("https://customer-avv2h3ae3kvexdfh.cloudflarestream.com/%s/manifest/video.m3u8",
+                    videoUid);
+            String quality = determineQuality(height);
 
-        if (movie != null && "ready".equalsIgnoreCase(state)) {
+            boolean updated = false;
 
-            String currentUrl = movie.getVideoUrl();
-            String finalHlsUrl = String.format(
-                    "https://customer-avv2h3ae3kvexdfh.cloudflarestream.com/%s/manifest/video.m3u8",
-                    videoUid
-            );
+            // --- CASE 1: Check MOVIE ---
+            Optional<Movie> movieOpt = movieRepository.findByVideoUrlContaining(videoUid);
+            if (movieOpt.isPresent()) {
+                Movie movie = movieOpt.get();
+                if (movie.getVideoStatus() != VideoUploadStatus.READY) {
+                    movie.setVideoUrl(hlsUrl);
+                    movie.setVideoStatus(VideoUploadStatus.READY);
+                    movie.setQuality(quality);
+                    movieRepository.save(movie);
+                    updated = true;
+                }
+            }
+            // --- CASE 2: Check EPISODE (Nếu không phải Movie) ---
+            else {
+                Optional<Episode> episodeOpt = episodeRepository.findByVideoUrlContaining(videoUid);
+                if (episodeOpt.isPresent()) {
+                    Episode episode = episodeOpt.get();
+                    // (Giả sử Episode có enum VideoUploadStatus, nếu chưa có thì chỉ update URL)
+                    // episode.setVideoStatus(VideoUploadStatus.READY);
 
-            // Chỉ update DB nếu URL hiện tại KHÁC URL cuối cùng (tức là chưa update)
-            // Hoặc URL hiện tại không chứa ".m3u8"
-            if (!currentUrl.equals(finalHlsUrl)) {
-                movie.setVideoUrl(finalHlsUrl);
-                movie.setVideoStatus(VideoUploadStatus.READY);
-                movieRepository.save(movie);
-
-                System.out.println("✅ Movie video URL updated to HLS link");
+                    // Kiểm tra để tránh update thừa
+                    if (!hlsUrl.equals(episode.getVideoUrl())) {
+                        episode.setVideoUrl(hlsUrl);
+                        // episode.setQuality(quality); // Nếu episode có cột quality
+                        episodeRepository.save(episode);
+                        updated = true;
+                    }
+                }
             }
 
-            // Luôn trả về URL cuối cùng cho Frontend dùng ngay (preview)
-            cfInfo.put("streamUrl", finalHlsUrl);
+            if (updated) {
+                log.info("✅ DB Updated for UID: {}", videoUid);
+            }
+
+            // Trả về URL stream để Frontend play ngay lập tức
+            cfInfo.put("streamUrl", hlsUrl);
         }
 
         return ServiceResult.Success().data(cfInfo);
     }
+    private String determineQuality(int height) {
+        if (height >= 2160) return "4K";
+        if (height >= 1440) return "2K";
+        if (height >= 1080) return "1080P"; // Full HD
+        if (height >= 720) return "720P";
+        if (height >= 480) return "480P";
+        return "240P"; // Hoặc Unknown
+    }
+
+    public ServiceResult searchWatchedMovies(MovieSearchRequest request, Pageable pageable) {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                return ServiceResult.Failure()
+                        .code(ErrorCode.UNAUTHORIZED)
+                        .message("User must be logged in");
+            }
+
+            Specification<Movie> spec = (root, query, cb) -> {
+                // Base predicates from search request
+                Predicate base = createSearchSpec(request, null).toPredicate(root, query, cb);
+
+                // Subquery to filter movies that have viewing history by current user
+                Subquery<UUID> subquery = query.subquery(UUID.class);
+                Root<ViewingHistory> vh = subquery.from(ViewingHistory.class);
+                subquery.select(vh.get("movie").get("id"));
+                subquery.where(cb.equal(vh.get("user").get("id"), currentUser.getId()));
+
+                Predicate watchedByUser = root.get("id").in(subquery);
+
+                query.distinct(true);
+                return cb.and(base, watchedByUser);
+            };
+
+            Page<Movie> pageResult = movieRepository.findAll(spec, pageable);
+            Page<MovieSearchResponse> pageDto = pageResult.map(this::mapToMovieSearchResponse);
+
+            return ServiceResult.Success()
+                    .code(ErrorCode.SUCCESS)
+                    .message("Get watched movies successfully")
+                    .data(pageDto);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ServiceResult.Failure()
+                    .code(ErrorCode.FAILED)
+                    .message("Internal Server Error: " + e.getMessage());
+        }
+    }
 }
+

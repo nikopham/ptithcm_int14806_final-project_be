@@ -10,7 +10,6 @@ import java.util.UUID;
 public class ChangePasswordProfileRequest {
     private UUID id;
 
-    @NotBlank(message = "Current password is required")
     private String currentPw;
 
     @NotBlank(message = "New password is required")

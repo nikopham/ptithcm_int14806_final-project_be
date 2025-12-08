@@ -1,6 +1,7 @@
 package com.ptithcm.movie.movie.entity;
 
 
+import com.ptithcm.movie.common.constant.VideoUploadStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -44,4 +45,8 @@ public class Episode {
 
     @Column(name = "air_date")
     private LocalDate airDate;
+
+    @Column(name = "video_status")
+    @Enumerated(EnumType.STRING)
+    private VideoUploadStatus videoStatus;
 }

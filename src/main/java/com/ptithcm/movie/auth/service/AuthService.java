@@ -2,11 +2,16 @@ package com.ptithcm.movie.auth.service;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.ptithcm.movie.auth.dto.*;
+import com.ptithcm.movie.auth.entity.AuthProvider;
 import com.ptithcm.movie.auth.entity.PasswordResetToken;
+import com.ptithcm.movie.auth.entity.UserOauthAccount;
 import com.ptithcm.movie.auth.entity.VerificationToken;
 import com.ptithcm.movie.auth.jwt.JwtTokenProvider;
+import com.ptithcm.movie.auth.repository.AuthProviderRepository;
 import com.ptithcm.movie.auth.repository.PasswordResetTokenRepository;
+import com.ptithcm.movie.auth.repository.UserOAuthAccountRepository;
 import com.ptithcm.movie.auth.repository.VerificationTokenRepository;
 import com.ptithcm.movie.auth.security.UserPrincipal;
 import com.ptithcm.movie.auth.session.UserSessionService;
@@ -26,9 +31,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriUtils;
 
@@ -55,6 +62,142 @@ public class AuthService {
     private final PasswordResetTokenRepository prRepo;
     private final MailService mailService;
     private final RoleRepository roleRepo;
+    private final GoogleHelper googleHelper;
+    private final AuthProviderRepository providerRepository;
+    private final UserOAuthAccountRepository oauthRepository;
+
+
+    @Transactional
+    public ServiceResult loginByGoogle(GoogleLoginRequest request, String userAgent) {
+        try {
+            // 1. Xác thực với Google Server (Lấy thông tin User)
+            GoogleIdToken.Payload payload = googleHelper.verify(request.getCode());
+
+            String email = payload.getEmail();
+            String googleUserId = payload.getSubject();
+            String name = (String) payload.get("name");
+            String pictureUrl = (String) payload.get("picture");
+
+            // 2. Tìm hoặc Tạo User (Logic xử lý liên kết tài khoản)
+            User user = resolveGoogleUser(email, googleUserId, name, pictureUrl);
+
+            // 3. Check trạng thái (Giống hàm login thường)
+            if (Boolean.FALSE.equals(user.isActive())) {
+                return ServiceResult.Failure()
+                        .code(ErrorCode.BANNED_ACCOUNT)
+                        .message("Tài khoản của bạn đã bị khóa");
+            }
+
+            // 4. Tạo Session & Token (Copy logic từ hàm login)
+            // Tạo JTI cho session quản lý thiết bị
+            UUID jti = sessionSvc.createSession(user.getId(), userAgent);
+
+            UserPrincipal userPrincipal = new UserPrincipal(user);
+            String accessToken = jwtProvider.generateAccessToken(userPrincipal);
+            String refreshToken = jwtProvider.generateRefreshToken(user.getId(), jti);
+
+            // 5. Build Response (Đồng bộ cấu trúc với login thường)
+            List<String> listRoles = new ArrayList<>();
+            if (user.getRole() != null) {
+                listRoles.add(user.getRole().getCode());
+            }
+
+            AuthResponse authResponse = new AuthResponse();
+
+            authResponse.setAccessToken(accessToken);
+            authResponse.setUsername(user.getUsername());
+            authResponse.setAvatarUrl(user.getAvatarUrl());
+            authResponse.setRoles(listRoles);
+
+            LoginResult result = LoginResult.builder()
+                    .refreshToken(refreshToken) // Trả về để FE lưu cookie hoặc storage
+                    .authResponse(authResponse)
+                    .build();
+
+            return ServiceResult.Success()
+                    .code(ErrorCode.SUCCESS)
+                    .message("Đăng nhập Google thành công")
+                    .data(result);
+
+        } catch (Exception e) {
+            log.error("Google Login Error", e);
+            return ServiceResult.Failure()
+                    .code(ErrorCode.BAD_CREDENTIALS) // Hoặc mã lỗi riêng
+                    .message("Đăng nhập Google thất bại: " + e.getMessage());
+        }
+    }
+
+
+    private User resolveGoogleUser(String email, String googleUserId, String name, String avatarUrl) {
+        AuthProvider provider = providerRepository.findByProviderKey("google")
+                .orElseThrow(() -> new RuntimeException("Google provider chưa được cấu hình trong DB"));
+
+        // B. Tìm xem đã có liên kết OAuth chưa?
+        Optional<UserOauthAccount> oauthOpt = oauthRepository
+                .findByProvider_IdAndProviderUserId(Integer.valueOf(provider.getId()), googleUserId);
+
+        if (oauthOpt.isPresent()) {
+            // CASE 1: Đã từng đăng nhập Google -> Trả về User cũ
+            User user = oauthOpt.get().getUser();
+            // (Optional) Update lại avatar nếu user chưa có avatar
+            if (user.getAvatarUrl() == null && avatarUrl != null) {
+                user.setAvatarUrl(avatarUrl);
+                userRepo.save(user);
+            }
+            return user;
+        }
+
+        // C. Chưa liên kết -> Tìm theo Email
+        Optional<User> userByEmailOpt = userRepo.findByEmailIgnoreCase(email);
+
+        if (userByEmailOpt.isPresent()) {
+            // CASE 2: Email đã tồn tại (User đăng ký thường trước đó) -> Link tài khoản
+            User existingUser = userByEmailOpt.get();
+            linkGoogleAccount(existingUser, provider, googleUserId, email);
+
+            // Google login coi như đã verify email
+            if (!Boolean.TRUE.equals(existingUser.isEmailVerified())) {
+                existingUser.setEmailVerified(true);
+                userRepo.save(existingUser);
+            }
+            return existingUser;
+        }
+
+        // CASE 3: User hoàn toàn mới -> Tạo User + Link
+        User newUser = createNewGoogleUser(email, name, avatarUrl);
+        linkGoogleAccount(newUser, provider, googleUserId, email);
+        return newUser;
+    }
+
+    private User createNewGoogleUser(String email, String name, String avatarUrl) {
+        Role userRole = roleRepo.findByCode("viewer")
+                .orElseThrow(() -> new RuntimeException("Role USER not found"));
+
+        User newUser = new User();
+        newUser.setEmail(email);
+        // Tạo username từ email (hoặc random nếu muốn unique tuyệt đối)
+        newUser.setUsername(email.split("@")[0]);
+        newUser.setRole(userRole);
+        newUser.setAvatarUrl(avatarUrl);
+        newUser.setEmailVerified(true); // Google user auto verified
+        newUser.setActive(true);
+        newUser.setImported(false);
+
+        // Không set passwordHash vì login bằng Google
+
+        return userRepo.save(newUser);
+    }
+
+    private void linkGoogleAccount(User user, AuthProvider provider, String googleUserId, String email) {
+        UserOauthAccount oauth = new UserOauthAccount();
+        oauth.setUser(user);
+        oauth.setProvider(provider);
+        oauth.setProviderUserId(googleUserId);
+        oauth.setEmail(email);
+        oauth.setEmailVerified(true);
+
+        oauthRepository.save(oauth);
+    }
 
     /* ① yêu cầu reset --------------------------------------------------- */
     public ServiceResult forgotPassword(ForgotPasswordRequest req, String baseUrl) {
@@ -301,12 +444,12 @@ public class AuthService {
             listRoles.add(user.getRole().getCode());
         }
 
-        AuthResponse payload = new AuthResponse(
-                accessToken,
-                user.getUsername(),
-                user.getAvatarUrl(),
-                listRoles
-        );
+        AuthResponse payload = new AuthResponse();
+
+        payload.setAccessToken(accessToken);
+        payload.setUsername(user.getUsername());
+        payload.setAvatarUrl(user.getAvatarUrl());
+        payload.setRoles(listRoles);
 
         LoginResult result = LoginResult.builder()
                 .refreshToken(refreshToken)
@@ -359,12 +502,13 @@ public class AuthService {
             List<String> listRoles = new ArrayList<>();
             listRoles.add(user.getRole().getCode());
 
-            AuthResponse payload = new AuthResponse(
-                    newAccess,
-                    user.getUsername(),
-                    user.getAvatarUrl(),
-                    listRoles
-            );
+            AuthResponse payload = new AuthResponse();
+
+            payload.setAccessToken(newAccess);
+            payload.setUsername(user.getUsername());
+            payload.setAvatarUrl(user.getAvatarUrl());
+            payload.setRoles(listRoles);
+
             LoginResult result = LoginResult.builder()
                     .refreshToken(newRefresh)
                     .authResponse(payload)
@@ -397,6 +541,14 @@ public class AuthService {
             // token sai chữ ký/hết hạn ⇒ bỏ qua
         }
 
+        ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), "") // Ghi đè giá trị rỗng
+                .httpOnly(true)
+                .secure(jwtConfig.isCookieSecure())
+                .path("/")        // Phải trùng path với lúc tạo
+                .maxAge(0)        // 0 giây = Xóa ngay lập tức
+                .sameSite("Lax")
+                .build();
+
         /* dọn cookie refresh_token */
         ResponseCookie clear = ResponseCookie.from(jwtConfig.getRefreshCookie(), "")
                 .httpOnly(true).secure(true)
@@ -404,6 +556,9 @@ public class AuthService {
                 .maxAge(0)          // xoá
                 .sameSite("Lax").build();
         res.addHeader(HttpHeaders.SET_COOKIE, clear.toString());
+        res.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+
+        SecurityContextHolder.clearContext();
 
         return ServiceResult.Success()
                 .code(ErrorCode.SUCCESS)

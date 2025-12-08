@@ -57,10 +57,11 @@ spring:
         registration:
           # === Google ===
           google:
-            client-id: "617824209981-np2qj75ut5r8ise2l0imn2olhbjqlprl.apps.googleusercontent.com"
-            client-secret: "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"
+            client-id: "971013472316-ho7rn2oevnbbc1dfqn31dnhj7emmkaqn.apps.googleusercontent.com"
+            client-secret: "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"
             scope: openid, profile, email
-            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+            redirect-uri: "http://localhost:5173"
+#            redirect-uri: "{baseUrl}/login/oauth2/code/google"
 
         provider:
           # Google: chỉ cần issuer-uri (OIDC discovery)
@@ -68,11 +69,13 @@ spring:
             issuer-uri: https://accounts.google.com
 
 app:
+  public-url: https://linier-unsceptically-lonny.ngrok-free.dev
   jwt:
     secret: 69e09ce7aca975e391bfcbf6b6bfcbeafd747ad280a7874c0d51c86b2e59430f
     access-ttl-min: 15
     refresh-ttl-day: 7
     refresh-cookie: refresh_token
+    access_cookie: access_token
     cookie-secure: false
   cors:
     allowed-origins:
@@ -83,3 +86,9 @@ app:
 cloudflare:
   account-id: 2e15027f24f02f2b4247d94a5c16c3e2
   api-token: _idby8LY-4T6tsk4cMa9jGCG1qP8-nGWQZQAYfu-
+  webhook-secret: "movie-streaming-web"
+  subdomain: customer-avv2h3ae3kvexdfh.cloudflarestream.com
+
+meilisearch:
+  host: http://localhost:7700
+  api-key: f40df06b47f029d32ac2bbd230e5c210a3ab613a

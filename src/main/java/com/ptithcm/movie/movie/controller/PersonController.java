@@ -50,4 +50,12 @@ public class PersonController {
     public ResponseEntity<ServiceResult> deletePerson(@PathVariable UUID id) {
         return ResponseEntity.ok(personService.deletePerson(id));
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ServiceResult> getPersonDetail(
+            @PathVariable UUID id,
+            @PageableDefault(size = 12, sort = "releaseDate", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(personService.getPersonDetail(id, pageable));
+    }
 }

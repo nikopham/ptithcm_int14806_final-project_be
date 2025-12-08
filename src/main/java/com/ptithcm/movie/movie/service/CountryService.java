@@ -17,6 +17,18 @@ public class CountryService {
 
     private final CountryRepository countryRepository;
 
+    public ServiceResult getPublishedCountries() {
+        List<Country> countries = countryRepository.findAllWithPublishedMovies();
+        List<CountryResponse> response = countries.stream()
+                .map(c -> CountryResponse.builder()
+                        .id(c.getId())
+                        .name(c.getName())
+                        .isoCode(c.getIsoCode())
+                        .build())
+                .toList();
+        return ServiceResult.Success().data(response);
+    }
+
     public ServiceResult getAllCountries() {
         List<Country> countries = countryRepository.findAll(Sort.by(Sort.Direction.ASC, "name"));
 

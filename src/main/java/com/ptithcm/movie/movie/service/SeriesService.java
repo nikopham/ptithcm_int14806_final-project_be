@@ -118,6 +118,7 @@ public class SeriesService {
         if (request.getDurationMin() != null) episode.setDurationMin(request.getDurationMin());
         if (request.getSynopsis() != null) episode.setSynopsis(request.getSynopsis());
         if (request.getAirDate() != null) episode.setAirDate(request.getAirDate());
+        if (request.getVideoUrl() != null) episode.setVideoUrl(request.getVideoUrl());
         Episode saved = episodeRepository.save(episode);
         return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Episode updated successfully");
     }

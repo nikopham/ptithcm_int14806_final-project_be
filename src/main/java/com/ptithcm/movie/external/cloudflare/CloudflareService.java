@@ -21,6 +21,9 @@ public class CloudflareService {
     @Value("${cloudflare.account-id}")
     private String accountId;
 
+    @Value("${app.public-url}")
+    private String publicUrl;
+
     @Value("${cloudflare.api-token}")
     private String apiToken;
 
@@ -33,9 +36,14 @@ public class CloudflareService {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Tus-Resumable", "1.0.0");
+        headers.set("Upload-Length", "0");
 
         Map<String, Object> data = new HashMap<>();
         data.put("maxDurationSeconds", 14_400);
+
+        String webhookUrl = publicUrl + "/api/v1/webhooks/cloudflare";
+        data.put("notificationUrl", webhookUrl);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(data, headers);
 
@@ -73,6 +81,11 @@ public class CloudflareService {
     }
 
     public Map<String, Object> getVideoDetails(String videoUid) {
+        // 1. Validate UID trước khi gọi
+        if (videoUid == null || videoUid.trim().isEmpty()) {
+            throw new RuntimeException("Video UID cannot be empty");
+        }
+
         String url = "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/stream/" + videoUid;
 
         HttpHeaders headers = new HttpHeaders();
@@ -81,27 +94,45 @@ public class CloudflareService {
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+
+            // 2. Check HTTP Status
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                log.error("Cloudflare Error Status: {}", response.getStatusCode());
+                throw new RuntimeException("Cloudflare returned non-200 status: " + response.getStatusCode());
+            }
+
             JsonNode root = objectMapper.readTree(response.getBody());
 
-            if (root.get("success").asBoolean()) {
-                JsonNode result = root.get("result");
-                JsonNode status = result.get("status");
+            if (root.path("success").asBoolean(false)) {
+                JsonNode result = root.path("result");
+                JsonNode status = result.path("status");
+
+                // Lấy thông tin an toàn bằng .path() để tránh NullPointerException
+                int height = result.path("input").path("height").asInt(0);
+                int width = result.path("input").path("width").asInt(0);
+                double duration = result.path("duration").asDouble(0.0);
 
                 Map<String, Object> info = new HashMap<>();
-                info.put("uid", result.get("uid").asText());
-                info.put("state", status.get("state").asText()); // ready, inprogress, queued
+                info.put("uid", result.path("uid").asText());
+                info.put("state", status.path("state").asText());
+                info.put("height", height);
+                info.put("width", width);
+                info.put("duration", duration);
 
-                // pctComplete có thể là string số hoặc null
-                String pct = status.has("pctComplete") ? status.get("pctComplete").asText() : "0";
+                String pct = status.path("pctComplete").asText("0");
                 info.put("pctComplete", Double.parseDouble(pct));
-
-                info.put("readyToStream", result.get("readyToStream").asBoolean());
+                info.put("readyToStream", result.path("readyToStream").asBoolean());
 
                 return info;
             } else {
-                throw new RuntimeException("Cloudflare Error: " + root.get("errors").toString());
+                throw new RuntimeException("Cloudflare Error: " + root.path("errors").toString());
             }
+        } catch (HttpStatusCodeException e) {
+            // Bắt lỗi 4xx, 5xx cụ thể từ RestTemplate
+            log.error("Cloudflare HTTP Error: {} - Body: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("Failed to call Cloudflare: " + e.getStatusCode());
         } catch (Exception e) {
+            log.error("Internal Error calling Cloudflare", e);
             throw new RuntimeException("Failed to get video details: " + e.getMessage());
         }
     }
