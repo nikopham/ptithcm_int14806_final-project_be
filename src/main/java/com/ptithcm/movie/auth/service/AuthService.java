@@ -538,31 +538,17 @@ public class AuthService {
             sessionSvc.revoke(userId, jti);              // xoá key trên Redis
 
         } catch (JWTVerificationException ignored) {
-            // token sai chữ ký/hết hạn ⇒ bỏ qua
+            return ServiceResult.Success()
+                    .code(ErrorCode.SUCCESS)
+                    .message("Đã có lỗi xảy ra");
         }
-
-        ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), "") // Ghi đè giá trị rỗng
-                .httpOnly(true)
-                .secure(jwtConfig.isCookieSecure())
-                .path("/")        // Phải trùng path với lúc tạo
-                .maxAge(0)        // 0 giây = Xóa ngay lập tức
-                .sameSite("Lax")
-                .build();
-
-        /* dọn cookie refresh_token */
-        ResponseCookie clear = ResponseCookie.from(jwtConfig.getRefreshCookie(), "")
-                .httpOnly(true).secure(true)
-                .path("/api/auth/refresh")
-                .maxAge(0)          // xoá
-                .sameSite("Lax").build();
-        res.addHeader(HttpHeaders.SET_COOKIE, clear.toString());
-        res.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
-
-        SecurityContextHolder.clearContext();
-
         return ServiceResult.Success()
                 .code(ErrorCode.SUCCESS)
-                .message("Đăng xuất thành công");
+                .message("Revoked token thành công");
+
+
+
+
     }
 
     public void handleGoogleLogin(OAuth2AuthenticationToken token,

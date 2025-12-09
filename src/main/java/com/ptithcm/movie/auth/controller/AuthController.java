@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
@@ -120,11 +121,38 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ServiceResult logout(@CookieValue(value = "${app.jwt.refresh-cookie}", required = false)
+    public ResponseEntity<ServiceResult> logout(@CookieValue(value = "${app.jwt.refresh-cookie}", required = false)
                                 String refreshToken,
                                 HttpServletResponse response) {
 
-        return authService.logout(refreshToken, response);
+        ServiceResult result = authService.logout(refreshToken, response);
+
+        if (!result.getSuccess()) {
+            return ResponseEntity.status(result.getCode() == 401 ? 401 : 400)
+                    .body(ServiceResult.Failure().message(result.getMessage()));
+        }
+
+        ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), "") // Ghi đè giá trị rỗng
+                .httpOnly(true)
+                .secure(jwtConfig.isCookieSecure())
+                .path("/")        // Phải trùng path với lúc tạo
+                .maxAge(0)        // 0 giây = Xóa ngay lập tức
+                .sameSite("Lax")
+                .build();
+
+        /* dọn cookie refresh_token */
+        ResponseCookie clear = ResponseCookie.from(jwtConfig.getRefreshCookie(), "")
+                .httpOnly(true).secure(true)
+                .path("/api/auth/refresh")
+                .maxAge(0)          // xoá
+                .sameSite("Lax").build();
+
+
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clear.toString())
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .body(ServiceResult.Success().message("Logged out successfully"));
     }
 
     /* POST /api/auth/forgot-password */

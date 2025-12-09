@@ -11,6 +11,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -41,7 +42,8 @@ public class CloudflareService {
 
         Map<String, Object> data = new HashMap<>();
         data.put("maxDurationSeconds", 14_400);
-
+        data.put("requireSignedURLs", true);
+        data.put("allowedOrigins", List.of("your-movie-website.com", "localhost:5173"));
         String webhookUrl = publicUrl + "/api/v1/webhooks/cloudflare";
         data.put("notificationUrl", webhookUrl);
 

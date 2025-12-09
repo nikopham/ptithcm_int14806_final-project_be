@@ -80,7 +80,8 @@ public class SecurityConfig {
                                 ,"/api/v1/movies/progress",
                                 "/api/v1/countries/published",
                                 "/api/v1/genres/published",
-                                "/api/v1/movies/years"
+                                "/api/v1/movies/years",
+                                "/swagger-ui.html"
                         ).permitAll()
 
                         // Viewer + các admin: xem thông tin user, list phim đã like

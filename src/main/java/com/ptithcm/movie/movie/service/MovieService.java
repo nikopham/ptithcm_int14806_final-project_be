@@ -8,6 +8,7 @@ import com.ptithcm.movie.common.constant.MovieStatus;
 import com.ptithcm.movie.common.constant.VideoUploadStatus;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.external.cloudflare.CloudflareService;
+import com.ptithcm.movie.external.cloudflare.CloudflareStreamService;
 import com.ptithcm.movie.external.cloudinary.CloudinaryService;
 import com.ptithcm.movie.external.meili.SearchService;
 import com.ptithcm.movie.movie.dto.request.MovieCreateRequest;
@@ -26,6 +27,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +58,7 @@ public class MovieService {
     private final CloudflareService cloudflareService;
     private final SearchService searchService;
     private final EpisodeRepository episodeRepository;
+    private final CloudflareStreamService cloudflareStreamService;
 
     @Transactional
     public void saveProgress(WatchProgressRequest request) {
@@ -539,9 +542,11 @@ public class MovieService {
     }
 
     @Transactional(readOnly = true)
-    public ServiceResult getMovieDetail(UUID id) {
+    public ServiceResult getMovieDetail(UUID id, String userIp) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
+        boolean isLoggedIn = isAuthenticated();
+
 
         // 2. Xử lý People (Actors & Directors) + Movie Count
         // Lấy list ID
@@ -565,22 +570,42 @@ public class MovieService {
         List<MovieDetailResponse.SeasonDto> seasonDtos = null;
         if (movie.isSeries()) {
             List<Season> seasons = seasonRepository.findAllByMovieIdWithEpisodes(id);
+
             seasonDtos = seasons.stream().map(s -> MovieDetailResponse.SeasonDto.builder()
                     .id(s.getId())
                     .seasonNumber(s.getSeasonNumber())
                     .title(s.getTitle())
-                    // Map Episodes
                     .episodes(s.getEpisodes() == null ? new ArrayList<>() : s.getEpisodes().stream()
-                            .map(ep -> MovieDetailResponse.EpisodeDto.builder()
-                                    .id(ep.getId())
-                                    .episodeNumber(ep.getEpisodeNumber())
-                                    .title(ep.getTitle())
-                                    .durationMin(ep.getDurationMin())
-                                    .videoUrl(ep.getVideoUrl())
-                                    .synopsis(ep.getSynopsis())
-                                    .stillPath(ep.getStillPath())
-                                    .airDate(ep.getAirDate())
-                                    .build())
+                            .map(ep -> {
+                                // --- BẮT ĐẦU LOGIC XỬ LÝ URL ---
+                                String signedEpisodeUrl = null;
+
+                                // Chỉ xử lý nếu User đã Login VÀ Tập phim có link gốc
+                                if (isLoggedIn && ep.getVideoUrl() != null) {
+                                    // B1: Trích xuất UID từ link gốc trong DB
+                                    String uid = ep.getVideoUrl();
+
+                                    // B2: Ký Token (kèm IP binding)
+                                    if (uid != null) {
+                                        signedEpisodeUrl = cloudflareStreamService.generateSignedUrl(uid);
+                                    }
+                                }
+                                // --- KẾT THÚC LOGIC XỬ LÝ URL ---
+
+                                return MovieDetailResponse.EpisodeDto.builder()
+                                        .id(ep.getId())
+                                        .episodeNumber(ep.getEpisodeNumber())
+                                        .title(ep.getTitle())
+                                        .durationMin(ep.getDurationMin())
+
+                                        // Gán link đã ký vào đây
+                                        .videoUrl(signedEpisodeUrl)
+
+                                        .synopsis(ep.getSynopsis())
+                                        .stillPath(ep.getStillPath())
+                                        .airDate(ep.getAirDate())
+                                        .build();
+                            })
                             .toList())
                     .build()).toList();
         }
@@ -603,7 +628,13 @@ public class MovieService {
         if (currentUser != null) {
             isLiked = movieLikeRepository.existsById(new MovieLikeId(currentUser.getId(), id));
         }
+        String signedUrl = null;
+        if (isLoggedIn) {
 
+            String uid = movie.getVideoUrl();
+
+            signedUrl = cloudflareStreamService.generateSignedUrl(uid);
+        }
         // 6. Build Final Response
         MovieDetailResponse response = MovieDetailResponse.builder()
                 .id(movie.getId())
@@ -627,7 +658,7 @@ public class MovieService {
                 .averageRating(avgRating)
                 .viewCount(movie.getViewCount())
                 .reviewCount((int) reviewCount)
-                .videoUrl(movie.getVideoUrl())
+                .videoUrl(isLoggedIn ? signedUrl : null)
                 .genres(genreDtos)
                 .countries(countryDtos)
                 .actors(actorDtos)
@@ -637,7 +668,13 @@ public class MovieService {
 
         return ServiceResult.Success().data(response);
     }
-
+    private boolean isAuthenticated() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAuth = auth != null
+                && auth.isAuthenticated()
+                && !"anonymousUser".equals(auth.getPrincipal());
+        return isAuth;
+    }
     // --- Helpers ---
 
     private Map<UUID, Long> getPersonMovieCounts(List<UUID> ids, boolean isActor) {
@@ -774,7 +811,7 @@ public class MovieService {
             if (movieOpt.isPresent()) {
                 Movie movie = movieOpt.get();
                 if (movie.getVideoStatus() != VideoUploadStatus.READY) {
-                    movie.setVideoUrl(hlsUrl);
+                    movie.setVideoUrl(videoUid);
                     movie.setVideoStatus(VideoUploadStatus.READY);
                     movie.setQuality(quality);
                     movieRepository.save(movie);

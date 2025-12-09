@@ -152,7 +152,7 @@ public class WebhookService {
 
             // Chỉ update nếu chưa Ready để tránh spam DB
             if (movie.getVideoStatus() != VideoUploadStatus.READY) {
-                movie.setVideoUrl(hlsUrl);
+                movie.setVideoUrl(uid);
                 movie.setVideoStatus(VideoUploadStatus.READY);
                 movie.setQuality(quality); // [MỚI] Lưu chất lượng
 

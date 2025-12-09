@@ -8,6 +8,8 @@ import com.ptithcm.movie.movie.dto.request.MovieUpdateRequest;
 import com.ptithcm.movie.movie.dto.request.WatchProgressRequest;
 import com.ptithcm.movie.movie.service.MovieService;
 import com.ptithcm.movie.movie.service.ReviewService;
+import com.ptithcm.movie.utils.IpUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -85,8 +87,10 @@ public class MovieController {
     }
 
     @GetMapping("/detail/{id}")
-    public ResponseEntity<ServiceResult> getMovieDetail(@PathVariable UUID id) {
-        return ResponseEntity.ok(movieService.getMovieDetail(id));
+    public ResponseEntity<ServiceResult> getMovieDetail(@PathVariable UUID id ,
+                                                        HttpServletRequest request) {
+        String clientIp = IpUtils.getClientIp(request);
+        return ResponseEntity.ok(movieService.getMovieDetail(id, clientIp));
     }
 
     @GetMapping("/detail/{id}/reviews")
