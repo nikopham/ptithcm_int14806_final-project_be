@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,6 +18,21 @@ import java.util.UUID;
 
 @Repository
 public interface MovieRepository extends JpaRepository<Movie, UUID>, JpaSpecificationExecutor<Movie> {
+    @Query("SELECT COALESCE(SUM(m.viewCount), 0) FROM Movie m")
+    Long sumTotalViews();
+
+    long count();
+
+
+    @Modifying
+    @Query("UPDATE Movie m SET m.viewCount = COALESCE(m.viewCount, 0) + 1 WHERE m.id = :id")
+    void incrementViewCount(@Param("id") UUID id);
+
+    @Query("SELECT m.id FROM Movie m")
+    List<UUID> findAllIds();
+
+    List<Movie> findTop10ByOrderByViewCountDesc();
+
     @Query("SELECT m FROM Movie m " +
             "JOIN m.genres g " +
             "WHERE g.id = :genreId " +

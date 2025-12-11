@@ -44,6 +44,7 @@ public class MovieInfoResponse {
     private String slug;
     private boolean isSeries;
     private String videoUrl;
+    private String videoStatus;
     private List<SeasonDto> seasons;
 
     @Data
@@ -89,5 +90,7 @@ public class MovieInfoResponse {
         private String synopsis;
         private String stillPath;
         private LocalDate airDate;
+        private String videoUrl;
+        private String videoStatus;
     }
 }

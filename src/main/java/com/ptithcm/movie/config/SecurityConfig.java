@@ -91,7 +91,9 @@ public class SecurityConfig {
                                 "/api/v1/comments/**",
                                 "/api/v1/movies/like/**",
                                 "/api/v1/reviews/add",
-                                "/api/v1/reviews/update/**"
+                                "/api/v1/reviews/update/**",
+                                "/api/v1/movies/watched",
+                                "/api/v1/movies/*/view"
                         ).hasAnyAuthority(
                                 GlobalConstant.ROLE_VIEWER,
                                 GlobalConstant.ROLE_SUPER_ADMIN,

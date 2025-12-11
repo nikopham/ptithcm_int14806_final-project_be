@@ -12,6 +12,7 @@ import java.util.UUID;
 public class ReviewRequest {
 
     private UUID movieId;
+    private UUID episodeId;
 
     @NotNull(message = "Rating is required")
     @DecimalMin(value = "0.0", message = "Rating must be at least 0")

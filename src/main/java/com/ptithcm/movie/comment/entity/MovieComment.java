@@ -39,7 +39,7 @@ public class MovieComment {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    @Column(name = "sentiment_score")
+    @Column(name = "sentiment_score", precision = 5, scale = 4)
     private BigDecimal sentimentScore;
 
     @Column(name = "is_toxic")

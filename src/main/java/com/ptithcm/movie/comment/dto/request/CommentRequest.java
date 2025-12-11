@@ -10,6 +10,8 @@ public class CommentRequest {
 
     private UUID movieId;
 
+    private UUID episodeId;
+
     private UUID parentId;
 
     @NotBlank(message = "Content is required")

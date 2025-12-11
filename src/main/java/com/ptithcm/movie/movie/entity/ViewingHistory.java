@@ -33,11 +33,18 @@ public class ViewingHistory {
     @JoinColumn(name = "episode_id")
     private Episode episode;
 
-    @Column(name = "watched_seconds")
-    private Integer watchedSeconds;
+    @Column(name = "current_second")
+    private Long currentSecond;
 
-    @Column(name = "total_seconds") // Tổng thời lượng phim (để tính %)
-    private Integer totalSeconds;
+    // Thêm cột mới
+    @Column(name = "accumulated_seconds")
+    private Long accumulatedSeconds;
+
+    @Column(name = "total_seconds")
+    private Long totalSeconds;
+
+    @Column(name = "is_counted", nullable = false)
+    private Boolean isCounted = false;
 
     @Column(name = "last_watched_at")
     private OffsetDateTime lastWatchedAt;
@@ -49,8 +56,4 @@ public class ViewingHistory {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
-    public double getProgressPercent() {
-        if (totalSeconds == null || totalSeconds == 0) return 0.0;
-        return (double) watchedSeconds / totalSeconds * 100.0;
-    }
 }

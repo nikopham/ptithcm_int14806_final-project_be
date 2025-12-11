@@ -9,8 +9,11 @@ import com.ptithcm.movie.comment.entity.MovieComment;
 import com.ptithcm.movie.comment.repository.MovieCommentRepository;
 import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.dto.ServiceResult;
+import com.ptithcm.movie.external.smart.ToxicCheckResponse;
 import com.ptithcm.movie.movie.entity.Movie;
+import com.ptithcm.movie.movie.entity.ViewingHistory;
 import com.ptithcm.movie.movie.repository.MovieRepository;
+import com.ptithcm.movie.movie.repository.ViewingHistoryRepository;
 import com.ptithcm.movie.user.entity.Role;
 import com.ptithcm.movie.user.entity.User;
 import com.ptithcm.movie.user.repository.UserRepository;
@@ -23,7 +26,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.ptithcm.movie.external.smart.ContentModerationService;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -33,6 +38,8 @@ public class CommentService {
     private final MovieCommentRepository commentRepository;
     private final UserRepository userRepository;
     private final MovieRepository movieRepository;
+    private final ViewingHistoryRepository historyRepository;
+    private final ContentModerationService moderationService;
 
     @Transactional(readOnly = true)
     public ServiceResult getCommentsByMovie(UUID movieId, Pageable pageable) {
@@ -171,6 +178,8 @@ public class CommentService {
     public ServiceResult createComment(CommentRequest request) {
         User currentUser = getCurrentUser();
         if (currentUser == null) return ServiceResult.Failure().code(401).message("Unauthorized");
+        ToxicCheckResponse aiResult = moderationService.analyzeContent(request.getBody());
+        boolean isToxic = aiResult.getIsToxic();
 
         Movie movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
@@ -182,6 +191,17 @@ public class CommentService {
                 .isEdited(false)
                 .isHidden(false)
                 .build();
+        if (isToxic) {
+            comment.setHidden(true);
+        } else {
+            //
+        }
+        if (aiResult.getConfidence() != null) {
+            comment.setSentimentScore(BigDecimal.valueOf(aiResult.getConfidence()));
+        } else {
+            comment.setSentimentScore(BigDecimal.ZERO);
+        }
+
 
         if (request.getParentId() != null) {
             MovieComment parent = commentRepository.findById(request.getParentId())
@@ -213,7 +233,15 @@ public class CommentService {
         }
 
         MovieComment savedComment = commentRepository.save(comment);
+        if (isToxic) {
+            return ServiceResult.Failure()
+                    .code(ErrorCode.FAILED)
+                    .message(String.format(
+                            "Nhận diện bình luận có nội dung không phù hợp. Bình luận của bạn đã được kiểm duyệt và không được hiển thị. Trọng số tích cực %s",
+                            BigDecimal.valueOf(aiResult.getConfidence())
+                    ));
 
+        }
         return ServiceResult.Success()
                 .message("Comment posted successfully")
                 .data(mapToCommentResponse(savedComment));

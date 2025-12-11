@@ -1,5 +1,6 @@
 package com.ptithcm.movie.movie.repository;
 
+import com.ptithcm.movie.movie.dto.response.GenreStatResponse;
 import com.ptithcm.movie.movie.entity.Genre;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,12 @@ import java.util.Optional;
 
 @Repository
 public interface GenreRepository extends JpaRepository<Genre, Integer>, JpaSpecificationExecutor<Genre> {
+    @Query("SELECT new com.ptithcm.movie.movie.dto.response.GenreStatResponse(g.name, COUNT(m.id)) " +
+            "FROM Genre g JOIN g.movies m " +
+            "GROUP BY g.id, g.name " +
+            "ORDER BY COUNT(m.id) DESC")
+    List<GenreStatResponse> findTop5Genres(Pageable pageable);
+
     @Query("SELECT g.id, COUNT(m.id) FROM Movie m JOIN m.genres g WHERE g.id IN :ids GROUP BY g.id")
     List<Object[]> countMoviesByGenreIds(@Param("ids") List<Integer> ids);
 

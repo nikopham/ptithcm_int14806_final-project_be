@@ -61,6 +61,11 @@ public class MovieService {
     private final CloudflareStreamService cloudflareStreamService;
 
     @Transactional
+    public void increaseViewCount(UUID movieId) {
+        movieRepository.incrementViewCount(movieId);
+    }
+
+    @Transactional
     public void saveProgress(WatchProgressRequest request) {
         User user = getCurrentUser();
         if (user == null) return;
@@ -77,12 +82,46 @@ public class MovieService {
                     .user(user)
                     .movie(movie)
                     .episode(episode)
+                    .accumulatedSeconds(0L)
+                    .isCounted(false)
                     .build();
         }
 
-        history.setWatchedSeconds(request.getWatchedSeconds());
+        history.setCurrentSecond(request.getCurrentSecond());
+
         history.setTotalSeconds(request.getTotalSeconds());
         history.setLastWatchedAt(OffsetDateTime.now());
+
+        long validDelta = 0L;
+        if (request.getWatchedDelta() != null
+                && request.getWatchedDelta() > 0
+                && request.getWatchedDelta() <= 20) {
+            validDelta = request.getWatchedDelta();
+        }
+
+        long currentAccumulated = history.getAccumulatedSeconds() == null ? 0L : history.getAccumulatedSeconds();
+        long newAccumulated = currentAccumulated + validDelta;
+
+        if (request.getTotalSeconds() != null && newAccumulated > request.getTotalSeconds()) {
+            newAccumulated = request.getTotalSeconds();
+        }
+
+        history.setAccumulatedSeconds(newAccumulated);
+
+        if (request.getTotalSeconds() != null && request.getTotalSeconds() > 0) {
+            // Tính ngưỡng 10% (1/10)
+            double threshold = request.getTotalSeconds() * 0.1;
+
+            // Điều kiện:
+            // 1. Thời gian tích lũy >= 10% tổng thời lượng
+            // 2. Chưa từng cộng view cho lần xem này (!isCounted)
+            if (newAccumulated >= threshold && !Boolean.TRUE.equals(history.getIsCounted())) {
+
+                movieRepository.incrementViewCount(request.getMovieId());
+
+                history.setIsCounted(true);
+            }
+        }
 
         historyRepository.save(history);
     }
@@ -210,15 +249,18 @@ public class MovieService {
             return ServiceResult.Failure().code(ErrorCode.FAILED).message("Image upload failed: " + e.getMessage());
         }
     }
-
     @Transactional(readOnly = true)
     public ServiceResult getMovieInfo(UUID id) {
+        // 1. Lấy thông tin phim
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
 
+        // --- CHECK LOGIN STATUS ---
+        boolean isLoggedIn = isAuthenticated();
+
+        // 2. Xử lý Genres (Giữ nguyên)
         List<Integer> genreIds = movie.getGenres().stream().map(Genre::getId).toList();
         Map<Integer, Long> genreCounts = new HashMap<>();
-
         if (!genreIds.isEmpty()) {
             List<Object[]> counts = genreRepository.countMoviesByGenreIds(genreIds);
             for (Object[] row : counts) {
@@ -226,42 +268,31 @@ public class MovieService {
             }
         }
 
-
+        // 3. Mapping Country, Genre, Actor, Director (Giữ nguyên)
         List<MovieInfoResponse.CountryDto> countries = movie.getCountries().stream()
-                .map(c -> MovieInfoResponse.CountryDto.builder()
-                        .id(c.getId())
-                        .isoCode(c.getIsoCode())
-                        .name(c.getName())
-                        .build())
-                .toList();
+                .map(c -> MovieInfoResponse.CountryDto.builder().id(c.getId()).isoCode(c.getIsoCode()).name(c.getName()).build()).toList();
 
         List<MovieInfoResponse.GenreDto> genres = movie.getGenres().stream()
-                .map(g -> MovieInfoResponse.GenreDto.builder()
-                        .id(g.getId())
-                        .name(g.getName())
-                        .movieCount(genreCounts.getOrDefault(g.getId(), 0L))
-                        .build())
-                .toList();
+                .map(g -> MovieInfoResponse.GenreDto.builder().id(g.getId()).name(g.getName()).movieCount(genreCounts.getOrDefault(g.getId(), 0L)).build()).toList();
 
         List<MovieInfoResponse.PersonDto> actors = movie.getActors().stream()
-                .map(p -> MovieInfoResponse.PersonDto.builder()
-                        .id(p.getId())
-                        .name(p.getFullName())
-                        .avatar(p.getProfilePath())
-                        .build())
-                .toList();
+                .map(p -> MovieInfoResponse.PersonDto.builder().id(p.getId()).name(p.getFullName()).avatar(p.getProfilePath()).build()).toList();
 
-        MovieInfoResponse.PersonDto directorDto = movie.getDirectors().stream()
-                .findFirst()
-                .map(p -> MovieInfoResponse.PersonDto.builder()
-                        .id(p.getId())
-                        .name(p.getFullName())
-                        .avatar(p.getProfilePath())
-                        .build())
-                .orElse(null);
+        MovieInfoResponse.PersonDto directorDto = movie.getDirectors().stream().findFirst()
+                .map(p -> MovieInfoResponse.PersonDto.builder().id(p.getId()).name(p.getFullName()).avatar(p.getProfilePath()).build()).orElse(null);
 
+        // --- 4. XỬ LÝ URL CHO PHIM LẺ (MOVIE) ---
+        String movieSignedUrl = null;
+        if (isLoggedIn && movie.getVideoUrl() != null && !movie.isSeries()) {
+            // Trích xuất UID và tạo Signed Link
+            String uid = movie.getVideoUrl();
+            if (uid != null) {
+                movieSignedUrl = cloudflareStreamService.generateSignedUrl(uid);
+            }
+        }
+
+        // --- 5. XỬ LÝ SEASONS & EPISODES (PHIM BỘ) ---
         List<MovieInfoResponse.SeasonDto> seasonDtos = new ArrayList<>();
-
         if (movie.isSeries()) {
             List<Season> seasons = seasonRepository.findAllByMovieIdWithEpisodes(movie.getId());
 
@@ -269,40 +300,61 @@ public class MovieService {
                     .id(s.getId())
                     .seasonNumber(s.getSeasonNumber())
                     .title(s.getTitle())
+                    // Map Episodes
                     .episodes(s.getEpisodes() == null ? new ArrayList<>() : s.getEpisodes().stream()
-                            .map(ep -> MovieInfoResponse.EpisodeDto.builder()
-                                    .id(ep.getId())
-                                    .episodeNumber(ep.getEpisodeNumber())
-                                    .title(ep.getTitle())
-                                    .duration(ep.getDurationMin())
-                                    .synopsis(ep.getSynopsis())
-                                    .stillPath(ep.getStillPath())
-                                    .airDate(ep.getAirDate())
-                                    .build())
+                            .map(ep -> {
+                                // Logic Signed URL cho từng tập
+                                String epSignedUrl = null;
+                                if (isLoggedIn && ep.getVideoUrl() != null) {
+                                    String uid = ep.getVideoUrl();
+                                    if (uid != null) {
+                                        epSignedUrl = cloudflareStreamService.generateSignedUrl(uid);
+                                    }
+                                }
+
+                                return MovieInfoResponse.EpisodeDto.builder()
+                                        .id(ep.getId())
+                                        .episodeNumber(ep.getEpisodeNumber())
+                                        .title(ep.getTitle())
+                                        .duration(ep.getDurationMin())
+                                        .synopsis(ep.getSynopsis())
+                                        .stillPath(ep.getStillPath())
+                                        .airDate(ep.getAirDate())
+
+                                        // [MỚI] Gán URL đã ký và Status
+                                        .videoUrl(epSignedUrl)
+                                        .videoStatus(ep.getVideoStatus() != null ? String.valueOf(ep.getVideoStatus()) : "PENDING")
+
+                                        .build();
+                            })
                             .toList())
                     .build()).toList();
         }
 
+        // --- 6. BUILD RESPONSE ---
         MovieInfoResponse response = MovieInfoResponse.builder()
                 .id(movie.getId())
                 .title(movie.getTitle())
                 .originalTitle(movie.getOriginalTitle())
                 .description(movie.getDescription())
-
                 .releaseYear(movie.getReleaseDate() != null ? String.valueOf(movie.getReleaseDate().getYear()) : "N/A")
-
                 .duration(movie.getDurationMin())
                 .ageRating(String.valueOf(movie.getAgeRating()))
                 .status(String.valueOf(movie.getStatus()))
+
+                // [MỚI] Thêm Video Status cho Movie
+                .videoStatus(movie.getVideoStatus() != null ? String.valueOf(movie.getVideoStatus()) : "PENDING")
 
                 .countries(countries)
                 .genres(genres)
                 .director(directorDto)
                 .actors(actors)
-                .videoUrl(movie.getVideoUrl())
+
+                // [MỚI] Gán URL đã ký cho Movie (nếu là phim lẻ)
+                .videoUrl(movieSignedUrl)
+
                 .posterUrl(movie.getPosterUrl())
                 .backdropUrl(movie.getBackdropUrl())
-
                 .slug(movie.getSlug())
                 .averageRating(movie.getAverageRating())
                 .viewCount(movie.getViewCount())
@@ -546,18 +598,27 @@ public class MovieService {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
         boolean isLoggedIn = isAuthenticated();
+        Map<UUID, Long> progressMap = new HashMap<>();
+        User currentUser = getCurrentUser();
+        if (isLoggedIn && currentUser != null) {
+            List<ViewingHistory> histories = historyRepository.findByUserIdAndMovieId(currentUser.getId(), id);
 
+            for (ViewingHistory h : histories) {
+                if (h.getEpisode() != null) {
+                    progressMap.put(h.getEpisode().getId(), h.getCurrentSecond());
+                } else {
 
-        // 2. Xử lý People (Actors & Directors) + Movie Count
-        // Lấy list ID
+                    progressMap.put(null, h.getCurrentSecond());
+                }
+            }
+        }
+
         List<UUID> actorIds = movie.getActors().stream().map(Person::getId).toList();
         List<UUID> directorIds = movie.getDirectors().stream().map(Person::getId).toList();
 
-        // Batch Query đếm số phim
         Map<UUID, Long> actorCounts = getPersonMovieCounts(actorIds, true);
         Map<UUID, Long> directorCounts = getPersonMovieCounts(directorIds, false);
 
-        // Map sang DTO
         List<PersonResponse> actorDtos = movie.getActors().stream()
                 .map(p -> mapPersonToDto(p, actorCounts.getOrDefault(p.getId(), 0L)))
                 .toList();
@@ -566,7 +627,6 @@ public class MovieService {
                 .map(p -> mapPersonToDto(p, directorCounts.getOrDefault(p.getId(), 0L)))
                 .toList();
 
-        // 3. Xử lý Series (Nếu là phim bộ)
         List<MovieDetailResponse.SeasonDto> seasonDtos = null;
         if (movie.isSeries()) {
             List<Season> seasons = seasonRepository.findAllByMovieIdWithEpisodes(id);
@@ -577,21 +637,19 @@ public class MovieService {
                     .title(s.getTitle())
                     .episodes(s.getEpisodes() == null ? new ArrayList<>() : s.getEpisodes().stream()
                             .map(ep -> {
-                                // --- BẮT ĐẦU LOGIC XỬ LÝ URL ---
+
                                 String signedEpisodeUrl = null;
 
-                                // Chỉ xử lý nếu User đã Login VÀ Tập phim có link gốc
                                 if (isLoggedIn && ep.getVideoUrl() != null) {
-                                    // B1: Trích xuất UID từ link gốc trong DB
+
                                     String uid = ep.getVideoUrl();
 
-                                    // B2: Ký Token (kèm IP binding)
                                     if (uid != null) {
                                         signedEpisodeUrl = cloudflareStreamService.generateSignedUrl(uid);
                                     }
                                 }
-                                // --- KẾT THÚC LOGIC XỬ LÝ URL ---
 
+                                Long epProgress = progressMap.getOrDefault(ep.getId(), 0L);
                                 return MovieDetailResponse.EpisodeDto.builder()
                                         .id(ep.getId())
                                         .episodeNumber(ep.getEpisodeNumber())
@@ -600,7 +658,7 @@ public class MovieService {
 
                                         // Gán link đã ký vào đây
                                         .videoUrl(signedEpisodeUrl)
-
+                                        .currentSecond(epProgress)
                                         .synopsis(ep.getSynopsis())
                                         .stillPath(ep.getStillPath())
                                         .airDate(ep.getAirDate())
@@ -610,8 +668,6 @@ public class MovieService {
                     .build()).toList();
         }
 
-
-        // 5. Map các object con khác (Genre, Country)
         List<GenreResponse> genreDtos = movie.getGenres().stream()
                 .map(g -> new GenreResponse(g.getId(), g.getName(), 0L))
                 .toList();
@@ -624,7 +680,7 @@ public class MovieService {
         Double avgRating = reviewRepository.getAverageRatingByMovieId(id);
 
         boolean isLiked = false;
-        User currentUser = getCurrentUser();
+
         if (currentUser != null) {
             isLiked = movieLikeRepository.existsById(new MovieLikeId(currentUser.getId(), id));
         }
@@ -635,7 +691,7 @@ public class MovieService {
 
             signedUrl = cloudflareStreamService.generateSignedUrl(uid);
         }
-        // 6. Build Final Response
+        Long movieProgress = progressMap.getOrDefault(null, 0L);
         MovieDetailResponse response = MovieDetailResponse.builder()
                 .id(movie.getId())
                 .title(movie.getTitle())
@@ -646,7 +702,7 @@ public class MovieService {
                 .posterUrl(movie.getPosterUrl())
                 .backdropUrl(movie.getBackdropUrl())
                 .trailerUrl(movie.getTrailerUrl())
-
+                .currentSecond(movieProgress)
                 .releaseDate(movie.getReleaseDate())
                 .releaseYear(movie.getReleaseDate() != null ? movie.getReleaseDate().getYear() : null)
                 .durationMin(movie.getDurationMin())

@@ -29,6 +29,7 @@ public class MovieDetailResponse {
     private String status;      // PUBLISHED
     private boolean isSeries;
     private boolean isLiked;
+    private Long currentSecond;
 
     // --- 3. Statistics ---
     private Double averageRating;
@@ -66,5 +67,6 @@ public class MovieDetailResponse {
         private String synopsis;
         private String stillPath;
         private LocalDate airDate;
+        private Long currentSecond;
     }
 }

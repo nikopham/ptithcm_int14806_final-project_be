@@ -6,13 +6,11 @@ import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.movie.dto.request.ReviewRequest;
 import com.ptithcm.movie.movie.dto.request.ReviewSearchRequest;
 import com.ptithcm.movie.movie.dto.response.ReviewResponse;
-import com.ptithcm.movie.movie.entity.Movie;
-import com.ptithcm.movie.movie.entity.MovieLike;
-import com.ptithcm.movie.movie.entity.MovieLikeId;
-import com.ptithcm.movie.movie.entity.Review;
+import com.ptithcm.movie.movie.entity.*;
 import com.ptithcm.movie.movie.repository.MovieLikeRepository;
 import com.ptithcm.movie.movie.repository.MovieRepository;
 import com.ptithcm.movie.movie.repository.ReviewRepository;
+import com.ptithcm.movie.movie.repository.ViewingHistoryRepository;
 import com.ptithcm.movie.user.entity.User;
 import com.ptithcm.movie.user.repository.UserRepository;
 import jakarta.persistence.criteria.Join;
@@ -40,6 +38,7 @@ public class ReviewService {
     private final MovieRepository movieRepository;
     private final UserRepository userRepository;
     private final MovieLikeRepository movieLikeRepository;
+    private final ViewingHistoryRepository historyRepository;
 
     public ServiceResult searchReviews(ReviewSearchRequest request, Pageable pageable) {
         Specification<Review> spec = createReviewSpec(request);
@@ -154,7 +153,17 @@ public class ReviewService {
     public ServiceResult createReview(ReviewRequest request) {
         User currentUser = getCurrentUser();
         if (currentUser == null) return ServiceResult.Failure().code(401).message("Unauthorized");
+        ViewingHistory history = historyRepository
+                .findByUserIdAndMovieIdAndEpisodeId(currentUser.getId(), request.getMovieId(), request.getEpisodeId())
+                .orElse(null);
 
+        double requiredProgress = 0.70;
+
+        if (history == null ||
+                (double) history.getAccumulatedSeconds() / history.getTotalSeconds() < requiredProgress) {
+
+            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Bạn chưa xem đủ 70% phim để có thể bình luận.");
+        }
         Movie movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
 
