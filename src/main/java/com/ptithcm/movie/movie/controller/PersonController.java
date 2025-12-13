@@ -56,6 +56,7 @@ public class PersonController {
             @PathVariable UUID id,
             @PageableDefault(size = 12, sort = "releaseDate", direction = Sort.Direction.DESC) Pageable pageable
     ) {
+//        return ResponseEntity.ok(null);
         return ResponseEntity.ok(personService.getPersonDetail(id, pageable));
     }
 }

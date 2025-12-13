@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -12,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class PersonResponse {
     private java.util.UUID id;
     private String fullName;
-    private String job;
+    private List<String> job;
     private String profilePath;
     private Long movieCount;
 }

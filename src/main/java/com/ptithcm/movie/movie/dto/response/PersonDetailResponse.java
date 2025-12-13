@@ -5,6 +5,7 @@ import lombok.Data;
 import org.springframework.data.domain.Page;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -16,7 +17,7 @@ public class PersonDetailResponse {
     private LocalDate birthDate;
     private String placeOfBirth;
     private String profilePath;
-    private String job;
+    private List<String> job;
 
     private Page<MovieSearchResponse> movies;
 }

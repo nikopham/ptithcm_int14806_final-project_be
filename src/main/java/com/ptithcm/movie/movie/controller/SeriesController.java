@@ -1,5 +1,6 @@
 package com.ptithcm.movie.movie.controller;
 
+import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.movie.dto.request.EpisodeCreateRequest;
 import com.ptithcm.movie.movie.dto.request.EpisodeUpdateRequest;
@@ -8,6 +9,7 @@ import com.ptithcm.movie.movie.dto.request.SeasonUpdateRequest;
 import com.ptithcm.movie.movie.service.SeriesService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,5 +55,14 @@ public class SeriesController {
             @RequestBody @Valid EpisodeUpdateRequest request
     ) {
         return ResponseEntity.ok(seriesService.updateEpisode(id, request));
+    }
+
+    @GetMapping("/seasons/{seasonId}/episodes")
+    public ResponseEntity<ServiceResult> getEpisodesBySeason(@PathVariable UUID seasonId) {
+        ServiceResult result = seriesService.getEpisodesBySeasonId(seasonId);
+        if (result.getCode() == ErrorCode.FAILED) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+        }
+        return ResponseEntity.ok(result);
     }
 }

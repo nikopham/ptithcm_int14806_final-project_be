@@ -22,11 +22,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -91,10 +89,16 @@ public class SearchService {
     @Async
     public void indexPerson(Person person) {
         try {
+            List<?> rawJobs = Optional.ofNullable(person.getJob()).orElse(Collections.emptyList());
+            List<String> jobs = rawJobs.stream()
+                    .filter(Objects::nonNull)
+                    .map(Object::toString)
+                    .collect(Collectors.toList());
+
             PersonDocument doc = PersonDocument.builder()
                     .id(person.getId().toString())
                     .fullName(person.getFullName())
-                    .job(person.getJob())
+                    .job(jobs)
                     .profilePath(person.getProfilePath())
                     .build();
 
@@ -179,9 +183,9 @@ public class SearchService {
         log.info("🔄 STARTING FULL SYNC...");
 
         try {
-            // 1. Xóa sạch dữ liệu cũ trong Index (Optional - Cẩn thận khi dùng)
-            // client.index(INDEX_MOVIES).deleteAllDocuments();
-            // client.index(INDEX_PEOPLE).deleteAllDocuments();
+//             1. Xóa sạch dữ liệu cũ trong Index (Optional - Cẩn thận khi dùng)
+             client.index(INDEX_MOVIES).deleteAllDocuments();
+             client.index(INDEX_PEOPLE).deleteAllDocuments();
 
             // 2. Đồng bộ Movies
             syncAllMovies();

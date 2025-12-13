@@ -6,13 +6,14 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @Data
 public class PersonRequest {
     @NotBlank(message = "Full name is required")
     private String fullName;
 
-    @NotNull(message = "Job is required")
-    private PersonJob job;
+    private List<String> job;
 
     private MultipartFile avatar;
 }

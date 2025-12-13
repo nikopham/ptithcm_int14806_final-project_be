@@ -21,7 +21,7 @@ public class GlobalSearchController {
     @PostMapping("/sync-all")
     public ResponseEntity<String> syncAllData() {
         // Logic: Load all movies/people từ DB -> Loop -> gọi indexMovie/indexPerson
-         searchService.syncAllData();
+        searchService.syncAllData();
         return ResponseEntity.ok("Sync process started...");
     }
 }

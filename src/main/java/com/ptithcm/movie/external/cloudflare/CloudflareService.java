@@ -138,4 +138,41 @@ public class CloudflareService {
             throw new RuntimeException("Failed to get video details: " + e.getMessage());
         }
     }
+
+    public boolean deleteVideo(String videoUid) {
+
+        if (videoUid == null || videoUid.trim().isEmpty()) {
+            throw new RuntimeException("Video UID cannot be empty");
+        }
+
+        String url = "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/stream/" + videoUid;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(apiToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.DELETE, entity, String.class);
+
+            // 2. Check HTTP Status
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                log.error("Cloudflare Error Status: {}", response.getStatusCode());
+                throw new RuntimeException("Cloudflare returned non-200 status: " + response.getStatusCode());
+            }
+
+            return true;
+
+        } catch (HttpStatusCodeException e) {
+            // Bắt lỗi 4xx, 5xx cụ thể từ RestTemplate
+            log.error("Cloudflare HTTP Error");
+            return false;
+//            throw new RuntimeException("Failed to call Cloudflare: " + e.getStatusCode());
+
+        } catch (Exception e) {
+            log.error("Internal Error calling Cloudflare", e);
+            return false;
+//            throw new RuntimeException("Failed to get video details: " + e.getMessage());
+        }
+
+    }
 }

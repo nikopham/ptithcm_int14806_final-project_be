@@ -30,6 +30,7 @@ public class MovieInfoResponse {
     private List<GenreDto> genres;
 
     private PersonDto director;
+    private List<PersonDto> directors;
     private List<PersonDto> actors;
 
     @JsonProperty("poster")
@@ -37,7 +38,7 @@ public class MovieInfoResponse {
 
     @JsonProperty("backdrop")
     private String backdropUrl;
-
+    private String quality;
     private Double averageRating;
     private Long viewCount;
     private String trailerUrl;

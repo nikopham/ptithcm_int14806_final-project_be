@@ -2,10 +2,13 @@ package com.ptithcm.movie.movie.service;
 
 import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.dto.ServiceResult;
+import com.ptithcm.movie.external.cloudflare.CloudflareStreamService;
 import com.ptithcm.movie.movie.dto.request.EpisodeCreateRequest;
 import com.ptithcm.movie.movie.dto.request.EpisodeUpdateRequest;
 import com.ptithcm.movie.movie.dto.request.SeasonCreateRequest;
 import com.ptithcm.movie.movie.dto.request.SeasonUpdateRequest;
+import com.ptithcm.movie.movie.dto.response.CreateSeasonDto;
+import com.ptithcm.movie.movie.dto.response.MovieInfoResponse;
 import com.ptithcm.movie.movie.entity.Episode;
 import com.ptithcm.movie.movie.entity.Movie;
 import com.ptithcm.movie.movie.entity.Season;
@@ -13,9 +16,13 @@ import com.ptithcm.movie.movie.repository.EpisodeRepository;
 import com.ptithcm.movie.movie.repository.MovieRepository;
 import com.ptithcm.movie.movie.repository.SeasonRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -25,6 +32,7 @@ public class SeriesService {
     private final MovieRepository movieRepository;
     private final SeasonRepository seasonRepository;
     private final EpisodeRepository episodeRepository;
+    private final CloudflareStreamService cloudflareStreamService;
 
     @Transactional
     public ServiceResult addSeason(UUID movieId, SeasonCreateRequest request) {
@@ -46,7 +54,10 @@ public class SeriesService {
                 .build();
 
         Season savedSeason = seasonRepository.save(season);
-        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Season created successfully");
+        CreateSeasonDto created = new CreateSeasonDto();
+        created.setId(season.getId());
+
+        return ServiceResult.Success().code(ErrorCode.SUCCESS).data(created).message("Season created successfully");
     }
 
     @Transactional
@@ -121,5 +132,49 @@ public class SeriesService {
         if (request.getVideoUrl() != null) episode.setVideoUrl(request.getVideoUrl());
         Episode saved = episodeRepository.save(episode);
         return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Episode updated successfully");
+    }
+
+    @Transactional(readOnly = true)
+    public ServiceResult getEpisodesBySeasonId(UUID seasonId) {
+        if (!seasonRepository.existsById(seasonId)) {
+            return ServiceResult.Failure()
+                    .code(ErrorCode.FAILED)
+                    .message("Không tìm thấy season với ID đã cho");
+        }
+
+        boolean isLoggedIn = isAuthenticated();
+
+        List<Episode> episodes = episodeRepository.findAllBySeasonIdOrderByEpisodeNumber(seasonId);
+
+        List<MovieInfoResponse.EpisodeDto> dtos = episodes.stream().map(ep -> {
+            String epSignedUrl = null;
+            if (isLoggedIn && ep.getVideoUrl() != null) {
+                String uid = ep.getVideoUrl();
+                if (uid != null) {
+                    epSignedUrl = cloudflareStreamService.generateSignedUrl(uid);
+                }
+            }
+
+            return MovieInfoResponse.EpisodeDto.builder()
+                    .id(ep.getId())
+                    .episodeNumber(ep.getEpisodeNumber())
+                    .title(ep.getTitle())
+                    .duration(ep.getDurationMin())
+                    .synopsis(ep.getSynopsis())
+                    .stillPath(ep.getStillPath())
+                    .airDate(ep.getAirDate())
+                    .videoUrl(epSignedUrl)
+                    .videoStatus(ep.getVideoStatus() != null ? String.valueOf(ep.getVideoStatus()) : "PENDING")
+                    .build();
+        }).toList();
+
+        return ServiceResult.Success()
+                .code(ErrorCode.SUCCESS)
+                .data(dtos);
+    }
+
+    private boolean isAuthenticated() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken);
     }
 }

@@ -237,8 +237,7 @@ public class CommentService {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
                     .message(String.format(
-                            "Nhận diện bình luận có nội dung không phù hợp. Bình luận của bạn đã được kiểm duyệt và không được hiển thị. Trọng số tích cực %s",
-                            BigDecimal.valueOf(aiResult.getConfidence())
+                            "Nhận diện bình luận có nội dung không phù hợp. Bình luận của bạn đã được kiểm duyệt và không được hiển thị"
                     ));
 
         }

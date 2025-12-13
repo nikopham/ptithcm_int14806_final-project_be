@@ -13,6 +13,7 @@ import com.ptithcm.movie.movie.entity.Movie;
 import com.ptithcm.movie.movie.entity.Person;
 import com.ptithcm.movie.movie.repository.MovieRepository;
 import com.ptithcm.movie.movie.repository.PersonRepository;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -85,7 +86,13 @@ public class PersonService {
             }
 
             if (request.getJob() != null) {
-                predicates.add(cb.equal(root.get("job"), request.getJob().name()));
+                Expression<Boolean> jsonContains = cb.function(
+                        "jsonb_exists",
+                        Boolean.class,
+                        root.get("job"),
+                        cb.literal(request.getJob().name())
+                );
+                predicates.add(cb.isTrue(jsonContains));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -128,6 +135,7 @@ public class PersonService {
                 .data(responsePage);
     }
 
+
     @Transactional
     public ServiceResult createPerson(PersonRequest request) {
         try {
@@ -138,7 +146,7 @@ public class PersonService {
 
             Person person = Person.builder()
                     .fullName(request.getFullName())
-                    .job(request.getJob().name())
+                    .job(request.getJob())
                     .profilePath(avatarUrl)
                     .build();
 
@@ -161,7 +169,7 @@ public class PersonService {
                     .orElseThrow(() -> new RuntimeException("Person not found"));
 
             person.setFullName(request.getFullName());
-            person.setJob(request.getJob().name());
+            person.setJob(request.getJob());
 
             if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
                 String newAvatarUrl = cloudinaryService.uploadImage(request.getAvatar());

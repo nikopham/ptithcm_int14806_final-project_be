@@ -2,7 +2,11 @@ package com.ptithcm.movie.movie.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -33,6 +37,7 @@ public class Person {
     @Column(name = "place_of_birth")
     private String placeOfBirth;
 
-    @Builder.Default
-    private String job = "ACTOR";
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<String> job;
 }

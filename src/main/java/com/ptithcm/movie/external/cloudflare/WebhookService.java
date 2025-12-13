@@ -154,11 +154,10 @@ public class WebhookService {
             if (movie.getVideoStatus() != VideoUploadStatus.READY) {
                 movie.setVideoUrl(uid);
                 movie.setVideoStatus(VideoUploadStatus.READY);
-                movie.setQuality(quality); // [MỚI] Lưu chất lượng
+                movie.setQuality(quality);
 
-                // [MỚI] Cập nhật thời lượng chính xác từ file video (nếu muốn)
-                // movie.setDurationMin((int) (durationSeconds / 60));
-
+                movie.setDurationMin((int) (durationSeconds / 60));
+                movie.setStatus(MovieStatus.PUBLISHED);
                 movieRepository.save(movie);
                 log.info("✅ MOVIE '{}' is READY ({}).", movie.getTitle(), quality);
             }
@@ -172,8 +171,9 @@ public class WebhookService {
             Episode episode = episodeOpt.get();
 
             // Giả sử Episode entity cũng có cột videoStatus (nếu chưa có thì chỉ update URL)
-            // episode.setVideoStatus(VideoUploadStatus.READY);
-            episode.setVideoUrl(hlsUrl);
+            episode.setDurationMin((int) durationSeconds/60);
+            episode.setVideoStatus(VideoUploadStatus.READY);
+            episode.setVideoUrl(uid);
 
             // episode.setDurationMin((int) (durationSeconds / 60));
 

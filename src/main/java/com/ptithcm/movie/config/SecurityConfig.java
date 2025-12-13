@@ -76,11 +76,14 @@ public class SecurityConfig {
                                 "/api/v1/search/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/v1/webhooks/**"
-                                ,"/api/v1/movies/progress",
+                                "/api/v1/webhooks/**",
+                                "/api/v1/movies/*/info",
+                                "/api/v1/movies/recommend-for-you",
+                                "/api/v1/movies/progress",
                                 "/api/v1/countries/published",
                                 "/api/v1/genres/published",
                                 "/api/v1/movies/years",
+//                                "/api/v1/search/sync-all",
                                 "/swagger-ui.html"
                         ).permitAll()
 

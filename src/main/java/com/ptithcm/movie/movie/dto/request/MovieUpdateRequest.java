@@ -26,7 +26,7 @@ public class MovieUpdateRequest {
     private List<Integer> countryIds;
     private List<Integer> genreIds;
 
-    private UUID directorId;
+    private List<UUID> directorIds;
     private List<UUID> actorIds;
 
     // File ảnh (Optional - chỉ gửi khi muốn thay ảnh)

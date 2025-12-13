@@ -25,7 +25,7 @@ public class MovieCreateRequest {
     private List<Integer> countryIds;
     private List<Integer> genreIds;
 
-    private UUID directorId;
+    private List<UUID> directorIds;
     private List<UUID> actorIds;
 
     private UUID createdBy;
