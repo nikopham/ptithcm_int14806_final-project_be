@@ -56,10 +56,10 @@ public class AuthController {
 
         ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), authResponse.getAccessToken())
                 .httpOnly(true)
-                .secure(jwtConfig.isCookieSecure()) // true nếu chạy HTTPS
+                .secure(jwtConfig.isCookieSecure())
                 .path("/")
-                .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin())) // VD: 30 phút (Khớp với thời gian hết hạn của JWT)
-                .sameSite("Lax") // Chống CSRF cơ bản
+                .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin()))
+                .sameSite("Lax")
                 .build();
 
         ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginData.getRefreshToken())
@@ -97,10 +97,10 @@ public class AuthController {
         AuthResponse authResponse = loginData.getAuthResponse();
         ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), authResponse.getAccessToken())
                 .httpOnly(true)
-                .secure(jwtConfig.isCookieSecure()) // true nếu chạy HTTPS
+                .secure(jwtConfig.isCookieSecure())
                 .path("/")
-                .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin())) // VD: 30 phút (Khớp với thời gian hết hạn của JWT)
-                .sameSite("Lax") // Chống CSRF cơ bản
+                .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin()))
+                .sameSite("Lax")
                 .build();
 
         ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginData.getRefreshToken())
@@ -132,11 +132,11 @@ public class AuthController {
                     .body(ServiceResult.Failure().message(result.getMessage()));
         }
 
-        ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), "") // Ghi đè giá trị rỗng
+        ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), "")
                 .httpOnly(true)
                 .secure(jwtConfig.isCookieSecure())
-                .path("/")        // Phải trùng path với lúc tạo
-                .maxAge(0)        // 0 giây = Xóa ngay lập tức
+                .path("/")
+                .maxAge(0)
                 .sameSite("Lax")
                 .build();
 
@@ -144,7 +144,7 @@ public class AuthController {
         ResponseCookie clear = ResponseCookie.from(jwtConfig.getRefreshCookie(), "")
                 .httpOnly(true).secure(true)
                 .path("/api/auth/refresh")
-                .maxAge(0)          // xoá
+                .maxAge(0)
                 .sameSite("Lax").build();
 
 
@@ -179,13 +179,10 @@ public class AuthController {
             HttpServletRequest servletRequest,
             HttpServletResponse response
     ) {
-        // 1. Lấy User-Agent để tạo Session
         String userAgent = servletRequest.getHeader(HttpHeaders.USER_AGENT);
 
-        // 2. Gọi Service xử lý logic
         ServiceResult result = authService.loginByGoogle(request, userAgent);
 
-        // 3. Nếu thành công -> Set HttpOnly Cookie cho Refresh Token
         AuthResponse authResponse = new AuthResponse();
         if (result.getCode() == ErrorCode.SUCCESS) {
             LoginResult loginResult = (LoginResult) result.getData();
@@ -193,19 +190,18 @@ public class AuthController {
             authResponse = loginResult.getAuthResponse();
             ResponseCookie accessCookie = ResponseCookie.from(jwtConfig.getAccessCookie(), authResponse.getAccessToken())
                     .httpOnly(true)
-                    .secure(jwtConfig.isCookieSecure()) // true nếu chạy HTTPS
+                    .secure(jwtConfig.isCookieSecure())
                     .path("/")
-                    .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin())) // VD: 30 phút (Khớp với thời gian hết hạn của JWT)
-                    .sameSite("Lax") // Chống CSRF cơ bản
+                    .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin()))
+                    .sameSite("Lax")
                     .build();
 
-            // Tạo Cookie (Logic này y hệt hàm login thường của bạn)
             ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginResult.getRefreshToken())
                     .httpOnly(true)
-                    .secure(jwtConfig.isCookieSecure()) // True nếu chạy https
+                    .secure(jwtConfig.isCookieSecure())
                     .path("/api/auth/refresh")
                     .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
-                    .sameSite("Lax") // Hoặc "None" nếu Frontend/Backend khác domain
+                    .sameSite("Lax")
                     .build();
 
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

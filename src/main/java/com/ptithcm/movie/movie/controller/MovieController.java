@@ -59,6 +59,15 @@ public class MovieController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/search-public")
+    public ResponseEntity<ServiceResult> searchMoviesPublic(
+            @ModelAttribute MovieSearchRequest request,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        ServiceResult result = movieService.searchMoviesPublic(request, pageable);
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/search-liked")
     public ResponseEntity<ServiceResult> getLikedMovies(
             @ModelAttribute MovieSearchRequest request,

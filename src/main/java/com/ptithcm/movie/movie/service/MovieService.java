@@ -154,7 +154,9 @@ public class MovieService {
         String posterUrl = movie.getPosterUrl();
         String backdropUrl = movie.getBackdropUrl();
 
-        cloudflareService.deleteVideo(movie.getVideoUrl());
+        if(movie.getVideoUrl() != null){
+            cloudflareService.deleteVideo(movie.getVideoUrl());
+        }
 
         movieRepository.delete(movie);
 
@@ -422,6 +424,110 @@ public class MovieService {
                     .code(ErrorCode.FAILED)
                     .message("Internal Server Error: " + e.getMessage());
         }
+    }
+
+    public ServiceResult searchMoviesPublic(MovieSearchRequest request, Pageable pageable) {
+        try {
+            Specification<Movie> spec = createSearchPublicSpec(request, null);
+            Page<Movie> pageResult = movieRepository.findAll(spec, pageable);
+
+            Page<MovieSearchResponse> pageDto = pageResult.map(movie -> {
+
+
+                return MovieSearchResponse.builder()
+                        .id(movie.getId())
+                        .title(movie.getTitle())
+                        .originalTitle(movie.getOriginalTitle())
+                        .description(movie.getDescription())
+                        .slug(movie.getSlug())
+
+                        .posterUrl(movie.getPosterUrl())
+                        .backdropUrl(movie.getBackdropUrl())
+                        .videoUrl(movie.getVideoUrl())
+                        .releaseDate(movie.getReleaseDate())
+                        .releaseYear(movie.getReleaseDate() != null ? movie.getReleaseDate().getYear() : null)
+                        .durationMin(movie.getDurationMin())
+                        .ageRating(String.valueOf(movie.getAgeRating()))
+                        .quality(movie.getQuality())
+                        .status(String.valueOf(movie.getStatus()))
+                        .isSeries(movie.isSeries())
+                        .build();
+            });
+
+            return ServiceResult.Success()
+                    .code(ErrorCode.SUCCESS)
+                    .message("Search completed successfully")
+                    .data(pageDto);
+
+        } catch (Exception e) {
+            // Log error here
+            return ServiceResult.Failure()
+                    .code(ErrorCode.FAILED)
+                    .message("Internal Server Error: " + e.getMessage());
+        }
+    }
+
+    private Specification<Movie> createSearchPublicSpec(MovieSearchRequest request, UUID userId) {
+        User user = getCurrentUser();
+
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (StringUtils.hasText(request.getQuery())) {
+                String searchKey = "%" + request.getQuery().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("title")), searchKey),
+                        cb.like(cb.lower(root.get("originalTitle")), searchKey)
+                ));
+            }
+
+            predicates.add(cb.equal(root.get("status"), "PUBLISHED"));
+
+            if (request.getIsSeries() != null) {
+                predicates.add(cb.equal(root.get("isSeries"), request.getIsSeries()));
+            }
+
+            if (request.getStatus() != null) {
+                predicates.add(cb.equal(root.get("status"), request.getStatus()));
+            }
+
+            if (request.getAgeRating() != null) {
+                predicates.add(cb.equal(root.get("ageRating"), request.getAgeRating())); // Hoặc .name()
+            }
+
+            if (request.getGenreIds() != null && !request.getGenreIds().isEmpty()) {
+                Join<Movie, Genre> genreJoin = root.join("genres", JoinType.INNER);
+
+                predicates.add(genreJoin.get("id").in(request.getGenreIds()));
+            }
+
+            if (request.getCountryIds() != null && !request.getCountryIds().isEmpty()) {
+                Join<Movie, Country> countryJoin = root.join("countries", JoinType.INNER);
+                predicates.add(countryJoin.get("id").in(request.getCountryIds()));
+            }
+
+            if (request.getReleaseYear() != null) {
+                int year = request.getReleaseYear();
+                LocalDate startOfYear = LocalDate.of(year, 1, 1);
+                LocalDate endOfYear = LocalDate.of(year, 12, 31);
+
+                predicates.add(cb.between(root.get("releaseDate"), startOfYear, endOfYear));
+            }
+
+            if (userId != null) {
+                Subquery<UUID> subquery = query.subquery(UUID.class);
+                Root<MovieLike> subRoot = subquery.from(MovieLike.class);
+
+                subquery.select(subRoot.get("id").get("movieId"));
+                subquery.where(cb.equal(subRoot.get("id").get("userId"), userId));
+
+                predicates.add(root.get("id").in(subquery));
+            }
+
+            query.distinct(true);
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     private Specification<Movie> createSearchSpec(MovieSearchRequest request, UUID userId) {

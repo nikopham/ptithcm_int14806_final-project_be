@@ -15,9 +15,6 @@ import java.io.IOException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Bắt lỗi Vi phạm Ràng buộc DB (ví dụ: duplicate key)
-     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST) // Trả về 400
     public ServiceResult handleDataIntegrityViolation(DataIntegrityViolationException ex) {

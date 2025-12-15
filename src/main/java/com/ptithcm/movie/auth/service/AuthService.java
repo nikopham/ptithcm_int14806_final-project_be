@@ -132,14 +132,14 @@ public class AuthService {
         AuthProvider provider = providerRepository.findByProviderKey("google")
                 .orElseThrow(() -> new RuntimeException("Google provider chưa được cấu hình trong DB"));
 
-        // B. Tìm xem đã có liên kết OAuth chưa?
+        // Tìm xem đã có liên kết OAuth chưa?
         Optional<UserOauthAccount> oauthOpt = oauthRepository
                 .findByProvider_IdAndProviderUserId(Integer.valueOf(provider.getId()), googleUserId);
 
         if (oauthOpt.isPresent()) {
-            // CASE 1: Đã từng đăng nhập Google -> Trả về User cũ
+            // Đã từng đăng nhập Google -> Trả về User cũ
             User user = oauthOpt.get().getUser();
-            // (Optional) Update lại avatar nếu user chưa có avatar
+            // Update lại avatar nếu user chưa có avatar
             if (user.getAvatarUrl() == null && avatarUrl != null) {
                 user.setAvatarUrl(avatarUrl);
                 userRepo.save(user);
@@ -147,11 +147,11 @@ public class AuthService {
             return user;
         }
 
-        // C. Chưa liên kết -> Tìm theo Email
+        // Chưa liên kết -> Tìm theo Email
         Optional<User> userByEmailOpt = userRepo.findByEmailIgnoreCase(email);
 
         if (userByEmailOpt.isPresent()) {
-            // CASE 2: Email đã tồn tại (User đăng ký thường trước đó) -> Link tài khoản
+            // Email đã tồn tại (User đăng ký thường trước đó) -> Link tài khoản
             User existingUser = userByEmailOpt.get();
             linkGoogleAccount(existingUser, provider, googleUserId, email);
 
@@ -163,7 +163,7 @@ public class AuthService {
             return existingUser;
         }
 
-        // CASE 3: User hoàn toàn mới -> Tạo User + Link
+        // User hoàn toàn mới -> Tạo User + Link
         User newUser = createNewGoogleUser(email, name, avatarUrl);
         linkGoogleAccount(newUser, provider, googleUserId, email);
         return newUser;
@@ -175,15 +175,13 @@ public class AuthService {
 
         User newUser = new User();
         newUser.setEmail(email);
-        // Tạo username từ email (hoặc random nếu muốn unique tuyệt đối)
+        // Tạo username từ email
         newUser.setUsername(email.split("@")[0]);
         newUser.setRole(userRole);
         newUser.setAvatarUrl(avatarUrl);
-        newUser.setEmailVerified(true); // Google user auto verified
+        newUser.setEmailVerified(true);
         newUser.setActive(true);
         newUser.setImported(false);
-
-        // Không set passwordHash vì login bằng Google
 
         return userRepo.save(newUser);
     }
@@ -199,7 +197,7 @@ public class AuthService {
         oauthRepository.save(oauth);
     }
 
-    /* ① yêu cầu reset --------------------------------------------------- */
+    /* yêu cầu reset --------------------------------------------------- */
     public ServiceResult forgotPassword(ForgotPasswordRequest req, String baseUrl) {
 
         User user = userRepo.findByEmailIgnoreCase(req.email()).orElse(null);
@@ -228,11 +226,11 @@ public class AuthService {
                 .expiresAt(now.plusHours(2))
                 .build());
 
-        String link = baseUrl + "/reset-password?token=" + pr.getToken();
+        String link = "http://localhost:5173" + "/reset-password?token=" + pr.getToken();
         return mailService.sendPasswordReset(user, link);   // trả ServiceResult luôn
     }
 
-    /* ② verify token ---------------------------------------------------- */
+    /* verify token ---------------------------------------------------- */
     public ServiceResult verifyResetToken(String token) {
         PasswordResetToken pr = prRepo.findByToken(token).orElse(null);
         if (pr == null || pr.getExpiresAt().isBefore(OffsetDateTime.now()))
@@ -242,7 +240,7 @@ public class AuthService {
         return ServiceResult.Success().message("Token hợp lệ");
     }
 
-    /* ③ lưu mật khẩu mới ------------------------------------------------- */
+    /* lưu mật khẩu mới ------------------------------------------------- */
     public ServiceResult resetPassword(ResetPasswordRequest req) {
 
         if (!req.password().equals(req.repassword()))

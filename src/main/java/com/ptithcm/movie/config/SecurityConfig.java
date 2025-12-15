@@ -71,6 +71,7 @@ public class SecurityConfig {
                                 "/api/v1/genres/get-all",
                                 "/api/v1/countries/get-all",
                                 "/api/v1/movies/search",
+                                "/api/v1/movies/search-public",
                                 "/api/v1/movies/detail/**",
                                 "/api/v1/movies/*/comments",
                                 "/api/v1/search/**",
@@ -82,7 +83,9 @@ public class SecurityConfig {
                                 "/api/v1/movies/progress",
                                 "/api/v1/countries/published",
                                 "/api/v1/genres/published",
+                                "/api/v1/people/**",
                                 "/api/v1/movies/years",
+
 //                                "/api/v1/search/sync-all",
                                 "/swagger-ui.html"
                         ).permitAll()

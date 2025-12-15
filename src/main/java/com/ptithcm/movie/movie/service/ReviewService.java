@@ -162,7 +162,7 @@ public class ReviewService {
         if (history == null ||
                 (double) history.getAccumulatedSeconds() / history.getTotalSeconds() < requiredProgress) {
 
-            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Bạn chưa xem đủ 70% phim để có thể bình luận.");
+            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Bạn chưa xem đủ 70% phim để có thể đánh giá.");
         }
         Movie movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new RuntimeException("Movie not found"));

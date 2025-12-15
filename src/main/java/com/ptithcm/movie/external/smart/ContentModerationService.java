@@ -15,13 +15,11 @@ public class ContentModerationService {
 
     private final String AI_URL = "http://localhost:5000/toxic/predict";
 
-    // Đổi tên hàm cho đúng ý nghĩa: Phân tích nội dung (chứ không chỉ check)
     public ToxicCheckResponse analyzeContent(String content) {
         try {
             // Tạo body JSON
             Map<String, String> body = Map.of("text", content);
 
-            // Gọi API: Map thẳng vào Class DTO thay vì Map.class để đỡ phải ép kiểu thủ công
             ToxicCheckResponse response = restTemplate.postForObject(AI_URL, body, ToxicCheckResponse.class);
 
             if (response != null) {
