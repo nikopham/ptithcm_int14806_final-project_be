@@ -1,6 +1,7 @@
 package com.ptithcm.movie.movie.service;
 
 import com.ptithcm.movie.auth.security.UserPrincipal;
+import com.ptithcm.movie.comment.entity.MovieComment;
 import com.ptithcm.movie.common.constant.ErrorCode;
 import com.ptithcm.movie.common.dto.ServiceResult;
 import com.ptithcm.movie.movie.dto.request.ReviewRequest;
@@ -11,6 +12,7 @@ import com.ptithcm.movie.movie.repository.MovieLikeRepository;
 import com.ptithcm.movie.movie.repository.MovieRepository;
 import com.ptithcm.movie.movie.repository.ReviewRepository;
 import com.ptithcm.movie.movie.repository.ViewingHistoryRepository;
+import com.ptithcm.movie.user.entity.Role;
 import com.ptithcm.movie.user.entity.User;
 import com.ptithcm.movie.user.repository.UserRepository;
 import jakarta.persistence.criteria.Join;
@@ -26,9 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +58,7 @@ public class ReviewService {
                     .rating(review.getRating())
                     .title(review.getTitle())
                     .body(review.getBody())
+                    .isHidden(review.getIsHidden())
                     .createdAt(review.getCreatedAt())
                     .build();
         });
@@ -105,7 +107,7 @@ public class ReviewService {
 
     public ServiceResult getReviewsByMovie(UUID movieId, Pageable pageable) {
         if (!movieRepository.existsById(movieId)) {
-            return ServiceResult.Failure().code(404).message("Movie not found");
+            return ServiceResult.Failure().code(404).message("Không tìm thấy phim" );
         }
 
 
@@ -118,12 +120,13 @@ public class ReviewService {
                 .body(r.getBody())
                 .createdAt(r.getCreatedAt())
                 .userId(r.getUser().getId())
+                .isHidden(r.getIsHidden())
                 .username(r.getUser().getUsername())
                 .userAvatar(r.getUser().getAvatarUrl())
                 .build());
 
         return ServiceResult.Success()
-                .message("Get reviews successfully")
+                .message("Lấy danh sách đánh giá thành công")
                 .data(responsePage);
     }
 
@@ -152,7 +155,7 @@ public class ReviewService {
     @Transactional
     public ServiceResult createReview(ReviewRequest request) {
         User currentUser = getCurrentUser();
-        if (currentUser == null) return ServiceResult.Failure().code(401).message("Unauthorized");
+        if (currentUser == null) return ServiceResult.Failure().code(401).message("Chưa đăng nhập");
         ViewingHistory history = historyRepository
                 .findByUserIdAndMovieIdAndEpisodeId(currentUser.getId(), request.getMovieId(), request.getEpisodeId())
                 .orElse(null);
@@ -165,10 +168,10 @@ public class ReviewService {
             return ServiceResult.Failure().code(ErrorCode.FAILED).message("Bạn chưa xem đủ 70% phim để có thể đánh giá.");
         }
         Movie movie = movieRepository.findById(request.getMovieId())
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+                .orElseThrow(() -> new RuntimeException("Phim không tồn tại"));
 
         if (reviewRepository.existsByUserIdAndMovieId(currentUser.getId(), movie.getId())) {
-            return ServiceResult.Failure().code(400).message("You have already reviewed this movie");
+            return ServiceResult.Failure().code(400).message("Bạn đã đánh giá phim này rồi");
         }
 
         Review review = Review.builder()
@@ -184,20 +187,20 @@ public class ReviewService {
         updateMovieStats(movie.getId());
 
         return ServiceResult.Success()
-                .message("Review added successfully")
+                .message("Tạo đánh giá thành công")
                 .data(mapToReviewResponse(savedReview));
     }
 
     @Transactional
     public ServiceResult updateReview(UUID reviewId, ReviewRequest request) {
         User currentUser = getCurrentUser();
-        if (currentUser == null) return ServiceResult.Failure().code(401).message("Unauthorized");
+        if (currentUser == null) return ServiceResult.Failure().code(401).message("Chưa đăng nhập");
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá"));
 
         if (!review.getUser().getId().equals(currentUser.getId())) {
-            return ServiceResult.Failure().code(403).message("You can only edit your own review");
+            return ServiceResult.Failure().code(403).message("Bạn chỉ có thể cập nhật đánh giá của chính mình");
         }
 
         review.setRating(request.getRating());
@@ -209,7 +212,7 @@ public class ReviewService {
         updateMovieStats(review.getMovie().getId());
 
         return ServiceResult.Success()
-                .message("Review updated successfully")
+                .message("Cập nhật đánh giá thành công")
                 .data(mapToReviewResponse(updatedReview));
     }
 
@@ -240,4 +243,42 @@ public class ReviewService {
                 .build();
     }
 
+    @Transactional
+    public ServiceResult deleteReview(UUID id) {
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá"));
+
+        reviewRepository.delete(review);
+
+        reviewRepository.flush();
+
+        return ServiceResult.Success().code(ErrorCode.SUCCESS)
+                .message("Xóa đánh giá thành công");
+    }
+
+    @Transactional
+    public ServiceResult toggleHidden(UUID id) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return ServiceResult.Failure().code(ErrorCode.UNAUTHORIZED).message("Chưa đăng nhập");
+
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá"));
+
+        boolean isOwner = review.getUser().getId().equals(currentUser.getId());
+        Role role = currentUser.getRole();
+        boolean isAdmin = role != null && (role.getCode().equals("super_admin") || role.getCode().equals("comment_admin"));
+
+        if (!isOwner && !isAdmin) {
+            return ServiceResult.Failure().code(ErrorCode.FORBIDDEN).message("Bạn không có quyền thay đổi trạng thái đánh giá này");
+        }
+
+        review.setIsHidden(!review.getIsHidden());
+        reviewRepository.save(review);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", review.getId());
+        data.put("isHidden", review.getIsHidden());
+
+        return ServiceResult.Success().message("Cập nhật trạng thái đánh giá").data(data);
+    }
 }

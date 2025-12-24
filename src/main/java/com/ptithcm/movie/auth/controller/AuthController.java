@@ -152,7 +152,7 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clear.toString())
                 .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
-                .body(ServiceResult.Success().message("Logged out successfully"));
+                .body(ServiceResult.Success().message("Đăng xuất thành công"));
     }
 
     /* POST /api/auth/forgot-password */

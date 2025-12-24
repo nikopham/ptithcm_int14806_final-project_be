@@ -43,4 +43,14 @@ public class ReviewController {
     ) {
         return ResponseEntity.ok(reviewService.updateReview(id, request));
     }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<ServiceResult> deleteReview(@PathVariable UUID id) {
+        return ResponseEntity.ok(reviewService.deleteReview(id));
+    }
+
+    @PatchMapping("/{id}/toggle-hidden")
+    public ResponseEntity<ServiceResult> toggleHidden(@PathVariable UUID id) {
+        return ResponseEntity.ok(reviewService.toggleHidden(id));
+    }
 }

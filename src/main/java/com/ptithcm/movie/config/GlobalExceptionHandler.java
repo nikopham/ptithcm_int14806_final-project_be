@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IOException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) // Trả về 500
     public ServiceResult handleIOException(IOException ex) {
-        return ServiceResult.Failure().message("File upload failed: " + ex.getMessage());
+        return ServiceResult.Failure().message("Lỗi khi upload file: " + ex.getMessage());
     }
 
     /**
@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE) // Trả về 503
     public ServiceResult handleWebClientException(WebClientResponseException ex) {
         return ServiceResult.Failure()
-                .message("External API call failed: " + ex.getStatusText());
+                .message("Gọi API bên thứ 3 gặp sự cố: " + ex.getStatusText());
     }
 
     /**
@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) // Trả về 500
     public ServiceResult handleRuntimeException(RuntimeException ex) {
-        return ServiceResult.Failure().code(ErrorCode.INTERNAL_SERVER).message("An unexpected error occurred: " + ex.getMessage());
+        return ServiceResult.Failure().code(ErrorCode.INTERNAL_SERVER).message("Đã xảy ra lỗi không mong muốn: " + ex.getMessage());
     }
 
 
@@ -68,7 +68,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ServiceResult.Failure()
                         .code(ErrorCode.INVALIDATE_REQUEST)
-                        .message("Invalid request data"));
+                        .message("Dữ liệu đầu vào không hợp lệ: " + ex.getMessage()));
     }
 
     // 3. Bắt tất cả lỗi còn lại (500)
@@ -78,6 +78,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ServiceResult.Failure()
                         .code(ErrorCode.FAILED)
-                        .message("Internal Server Error: " + ex.getMessage()));
+                        .message("Lỗi hệ thống: " + ex.getMessage()));
     }
 }

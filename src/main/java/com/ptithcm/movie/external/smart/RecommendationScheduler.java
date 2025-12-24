@@ -18,9 +18,9 @@ public class RecommendationScheduler {
     private final RestTemplate restTemplate = new RestTemplate();
 
     // Chạy lúc 3:00 sáng mỗi ngày
-    @Scheduled(cron = "0 0 3 * * *")
+    @Scheduled(cron = "0 19 5 * * *")
     public void runTraining() {
-        log.info("🔄 Bắt đầu Job Training...");
+        log.info("Bắt đầu Job Training...");
 
         // 1. Lấy dữ liệu từ DB
         List<Map<String, Object>> raw = historyRepo.getTrainingData();

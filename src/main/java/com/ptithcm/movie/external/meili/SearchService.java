@@ -169,7 +169,7 @@ public class SearchService {
         } catch (Exception e) {
             // e.getMessage() có thể bị wrap bởi CompletableFuture, nên log kỹ
             log.error("Search error", e);
-            return ServiceResult.Failure().message("Search failed: " + e.getMessage());
+            return ServiceResult.Failure().message("Lỗi tìm kiếm: " + e.getMessage());
         }
     }
 

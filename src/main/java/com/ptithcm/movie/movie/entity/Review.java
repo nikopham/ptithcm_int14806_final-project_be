@@ -39,6 +39,8 @@ public class Review {
 
     private String title;
 
+    private Boolean isHidden;
+
     @Column(columnDefinition = "TEXT")
     private String body;
 

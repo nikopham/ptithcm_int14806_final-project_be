@@ -37,14 +37,14 @@ public class SeriesService {
     @Transactional
     public ServiceResult addSeason(UUID movieId, SeasonCreateRequest request) {
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phim"));
 
         if (!movie.isSeries()) {
-            return ServiceResult.Failure().message("This movie is not a TV Series");
+            return ServiceResult.Failure().message("Chỉ có thể thêm mùa phim cho phim bộ");
         }
 
         if (seasonRepository.existsByMovieIdAndSeasonNumber(movieId, request.getSeasonNumber())) {
-            return ServiceResult.Failure().message("Season number " + request.getSeasonNumber() + " already exists");
+            return ServiceResult.Failure().message("Mùa phim với số thứ tự " + request.getSeasonNumber() + " đã tồn tại");
         }
 
         Season season = Season.builder()
@@ -57,16 +57,16 @@ public class SeriesService {
         CreateSeasonDto created = new CreateSeasonDto();
         created.setId(season.getId());
 
-        return ServiceResult.Success().code(ErrorCode.SUCCESS).data(created).message("Season created successfully");
+        return ServiceResult.Success().code(ErrorCode.SUCCESS).data(created).message("Tạo mùa phim thành công");
     }
 
     @Transactional
     public ServiceResult addEpisode(UUID seasonId, EpisodeCreateRequest request) {
         Season season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new RuntimeException("Season not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy mùa phim"));
 
         if (episodeRepository.existsBySeasonIdAndEpisodeNumber(seasonId, request.getEpisodeNumber())) {
-            return ServiceResult.Failure().message("Episode number " + request.getEpisodeNumber() + " already exists in this season");
+            return ServiceResult.Failure().message("Tập phim với số thứ tự " + request.getEpisodeNumber() + " đã tồn tại trong mùa này");
         }
 
         Episode episode = Episode.builder()
@@ -79,14 +79,14 @@ public class SeriesService {
                 .build();
 
         Episode savedEpisode = episodeRepository.save(episode);
-        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Episode created successfully");
+        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Tạo tập phim thành công");
     }
 
     // --- UPDATE SEASON ---
     @Transactional
     public ServiceResult updateSeason(UUID id, SeasonUpdateRequest request) {
         Season season = seasonRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Season not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy mùa phim"));
 
         // Check trùng season number (nếu có thay đổi)
         if (request.getSeasonNumber() != null && !request.getSeasonNumber().equals(season.getSeasonNumber())) {
@@ -96,21 +96,21 @@ public class SeriesService {
                     id
             );
             if (exists) {
-                return ServiceResult.Failure().message("Season number already exists");
+                return ServiceResult.Failure().message("Số thứ tự mùa phim đã tồn tại");
             }
             season.setSeasonNumber(request.getSeasonNumber());
         }
 
         if (request.getTitle() != null) season.setTitle(request.getTitle());
         Season saved = seasonRepository.save(season);
-        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Season updated successfully");
+        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Cập nhật mùa phim thành công");
     }
 
     // --- UPDATE EPISODE ---
     @Transactional
     public ServiceResult updateEpisode(UUID id, EpisodeUpdateRequest request) {
         Episode episode = episodeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Episode not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tập phim"));
 
         // Check trùng episode number
         if (request.getEpisodeNumber() != null && !request.getEpisodeNumber().equals(episode.getEpisodeNumber())) {
@@ -120,7 +120,7 @@ public class SeriesService {
                     id
             );
             if (exists) {
-                return ServiceResult.Failure().message("Episode number already exists in this season");
+                return ServiceResult.Failure().message("Số thứ tự tập phim đã tồn tại trong mùa này");
             }
             episode.setEpisodeNumber(request.getEpisodeNumber());
         }
@@ -131,7 +131,7 @@ public class SeriesService {
         if (request.getAirDate() != null) episode.setAirDate(request.getAirDate());
         if (request.getVideoUrl() != null) episode.setVideoUrl(request.getVideoUrl());
         Episode saved = episodeRepository.save(episode);
-        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Episode updated successfully");
+        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Câp nhật tập phim thành công");
     }
 
     @Transactional(readOnly = true)
@@ -139,7 +139,7 @@ public class SeriesService {
         if (!seasonRepository.existsById(seasonId)) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Không tìm thấy season với ID đã cho");
+                    .message("Không tìm thấy mùa phim yêu cầu");
         }
 
         boolean isLoggedIn = isAuthenticated();

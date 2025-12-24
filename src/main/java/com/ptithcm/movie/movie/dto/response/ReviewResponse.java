@@ -23,6 +23,7 @@ public class ReviewResponse {
     private UUID userId;
     private String username;
     private String userAvatar;
+    private Boolean isHidden;
 
     private BigDecimal rating;
     private String title;

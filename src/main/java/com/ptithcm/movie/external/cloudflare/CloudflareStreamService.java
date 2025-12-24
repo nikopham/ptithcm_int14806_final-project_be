@@ -58,7 +58,7 @@ public class CloudflareStreamService {
         );
 
         try {
-            // 2. Body Request (Giống hệt lệnh CURL)
+            // 2. Body Request
             Map<String, Object> body = new HashMap<>();
             body.put("downloadable", false);
             body.put("accessRules", Collections.emptyList());

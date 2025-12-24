@@ -154,11 +154,11 @@ public class PersonService {
             searchService.indexPerson(savedPerson);
 
             return ServiceResult.Success().code(ErrorCode.SUCCESS)
-                    .message("Create person successfully")
+                    .message("Tạo nhân vật thành công")
                     .data(savedPerson);
 
         } catch (IOException e) {
-            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Error uploading avatar: " + e.getMessage());
+            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Lỗi khi tải ảnh lên: " + e.getMessage());
         }
     }
 
@@ -166,7 +166,7 @@ public class PersonService {
     public ServiceResult updatePerson(UUID id, PersonRequest request) {
         try {
             Person person = personRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Person not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân vật"));
 
             person.setFullName(request.getFullName());
             person.setJob(request.getJob());
@@ -181,18 +181,18 @@ public class PersonService {
             searchService.indexPerson(updatedPerson);
 
             return ServiceResult.Success().code(ErrorCode.SUCCESS)
-                    .message("Update person successfully")
+                    .message("Cập nhật nhân vật thành công")
                     .data(updatedPerson);
 
         } catch (IOException e) {
-            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Error uploading avatar: " + e.getMessage());
+            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Lỗi khi tải ảnh lên: " + e.getMessage());
         }
     }
 
     @Transactional
     public ServiceResult deletePerson(UUID id) {
         Person person = personRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Person not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân vật"));
 
         personRepository.deleteMovieActorRelations(id);
         personRepository.deleteMovieDirectorRelations(id);
@@ -206,6 +206,6 @@ public class PersonService {
         searchService.removePerson(id);
 
         return ServiceResult.Success()
-                .message("Person deleted successfully");
+                .message("Xóa nhân vật thành công");
     }
 }

@@ -138,17 +138,17 @@ public class MovieService {
         if (historyRepository.existsByMovieId(id)) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Cannot delete movie. User viewing history exists.");
+                    .message("Không thể xóa phim. Đã có lịch sử xem.");
         }
         if (reviewRepository.existsByMovieId(id)) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Cannot delete movie. Reviews exist.");
+                    .message("Không thể xóa phim. Đã có đánh giá.");
         }
         if (commentRepository.existsByMovieId(id)) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Cannot delete movie. Comments exist.");
+                    .message("Không thể xóa phim. Đã có bình luận.");
         }
 
         String posterUrl = movie.getPosterUrl();
@@ -170,14 +170,20 @@ public class MovieService {
         });
 
         return ServiceResult.Success().code(ErrorCode.SUCCESS)
-                .message("Movie deleted successfully");
+                .message("Xóa phim thành công");
     }
 
     @Transactional
     public ServiceResult updateMovie(UUID id, MovieUpdateRequest request) {
         try {
+            Optional<Movie> existingMovie = movieRepository.findMovieByTitleIgnoreCase(request.getTitle());
+            if (existingMovie.isPresent()) {
+                return ServiceResult.Failure()
+                        .code(ErrorCode.FAILED)
+                        .message("Phim với tiêu đề '" + request.getTitle() + "' đã tồn tại.");
+            }
             Movie movie = movieRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Movie not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy phim"));
 
             // 1. Update Basic Info (Chỉ update nếu khác null)
             if (request.getTitle() != null) movie.setTitle(request.getTitle());
@@ -250,16 +256,16 @@ public class MovieService {
 
             Movie updatedMovie = movieRepository.save(movie);
             searchService.indexMovie(updatedMovie);
-            return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Movie updated successfully");
+            return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Câp nhật phim thành công");
 
         } catch (IOException e) {
-            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Image upload failed: " + e.getMessage());
+            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Lỗi khi tải ảnh lên: " + e.getMessage());
         }
     }
     @Transactional(readOnly = true)
     public ServiceResult getMovieInfo(UUID id) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phim"));
 
         boolean isLoggedIn = isAuthenticated();
 
@@ -415,14 +421,14 @@ public class MovieService {
 
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
-                    .message("Search completed successfully")
+                    .message("Tìm kiếm thành công")
                     .data(pageDto);
 
         } catch (Exception e) {
             // Log error here
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Internal Server Error: " + e.getMessage());
+                    .message("Lỗi hệ thống: " + e.getMessage());
         }
     }
 
@@ -456,14 +462,14 @@ public class MovieService {
 
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
-                    .message("Search completed successfully")
+                    .message("Tìm kiếm thành công")
                     .data(pageDto);
 
         } catch (Exception e) {
             // Log error here
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Internal Server Error: " + e.getMessage());
+                    .message("Lỗi hệ thống: " + e.getMessage());
         }
     }
 
@@ -598,6 +604,12 @@ public class MovieService {
     @Transactional
     public ServiceResult createMovie(MovieCreateRequest request) {
         try {
+            Optional<Movie> existingMovie = movieRepository.findMovieByTitleIgnoreCase(request.getTitle());
+            if( existingMovie.isPresent()){
+                return ServiceResult.Failure()
+                        .code(ErrorCode.FAILED)
+                        .message("Phim với tiêu đề '" + request.getTitle() + "' đã tồn tại.");
+            }
             String posterUrl = cloudinaryService.uploadImage(request.getPosterImage());
             String backdropUrl = cloudinaryService.uploadImage(request.getBackdropImage());
 
@@ -654,17 +666,17 @@ public class MovieService {
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
                     .data(savedMovie)
-                    .message("Create movie successfully");
+                    .message("Tạo phim thành công");
 
 
         } catch (IOException e) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Error uploading image: " + e.getMessage());
+                    .message("Lỗi khi tải ảnh lên: " + e.getMessage());
         } catch (Exception e) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Internal Server Error: " + e.getMessage());
+                    .message("Lỗi hệ thống: " + e.getMessage());
         }
     }
 
@@ -718,7 +730,7 @@ public class MovieService {
     @Transactional(readOnly = true)
     public ServiceResult getMovieDetail(UUID id, String userIp) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phim"));
         boolean isLoggedIn = isAuthenticated();
         Map<UUID, Long> progressMap = new HashMap<>();
         User currentUser = getCurrentUser();
@@ -898,17 +910,17 @@ public class MovieService {
 
         User currentUser = getCurrentUser();
         if (currentUser == null) {
-            return ServiceResult.Failure().code(401).message("Unauthorized");
+            return ServiceResult.Failure().code(401).message("Chưa đăng nhập");
         }
 
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phim"));
 
         MovieLikeId likeId = new MovieLikeId(currentUser.getId(), movie.getId());
 
         if (movieLikeRepository.existsById(likeId)) {
             movieLikeRepository.deleteById(likeId);
-            return ServiceResult.Success().message("Unliked successfully").data("UNLIKED");
+            return ServiceResult.Success().message("Gỡ thích phim thành công").data("UNLIKED");
         } else {
             MovieLike newLike = MovieLike.builder()
                     .id(likeId)
@@ -917,7 +929,7 @@ public class MovieService {
                     .build();
 
             movieLikeRepository.save(newLike);
-            return ServiceResult.Success().message("Liked successfully").data("LIKED");
+            return ServiceResult.Success().message("Đã thích phim").data("LIKED");
         }
     }
 
@@ -947,7 +959,7 @@ public class MovieService {
             if (currentUser == null) {
                 return ServiceResult.Failure()
                         .code(ErrorCode.UNAUTHORIZED)
-                        .message("User must be logged in");
+                        .message("Người dùng cần đăng nhập");
             }
 
             Specification<Movie> spec = createSearchSpec(request, currentUser.getId());
@@ -958,14 +970,14 @@ public class MovieService {
 
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
-                    .message("Get liked movies successfully")
+                    .message("Lấy danh sách phim yêu thích thành công")
                     .data(pageDto);
 
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Internal Server Error: " + e.getMessage());
+                    .message("Lỗi hệ thống: " + e.getMessage());
         }
     }
 
@@ -1038,7 +1050,7 @@ public class MovieService {
             if (currentUser == null) {
                 return ServiceResult.Failure()
                         .code(ErrorCode.UNAUTHORIZED)
-                        .message("User must be logged in");
+                        .message("Người dùng cần đăng nhập");
             }
 
             Specification<Movie> spec = (root, query, cb) -> {
@@ -1062,13 +1074,13 @@ public class MovieService {
 
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
-                    .message("Get watched movies successfully")
+                    .message("Lấy danh sách phim đã xem thành công")
                     .data(pageDto);
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Internal Server Error: " + e.getMessage());
+                    .message("Lỗi hệ thống: " + e.getMessage());
         }
     }
 }

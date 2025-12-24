@@ -216,7 +216,7 @@ public class AuthService {
 
             return ServiceResult.Failure()
                     .code(ErrorCode.RESET_TOO_MANY)
-                    .message("Vui lòng đợi " + wait + "s rồi thử lại.");
+                    .message("Vui lòng đợi " + wait + "giây rồi thử lại.");
         }
 
         if (pr != null) prRepo.delete(pr);
@@ -236,7 +236,7 @@ public class AuthService {
         if (pr == null || pr.getExpiresAt().isBefore(OffsetDateTime.now()))
             return ServiceResult.Failure()
                     .code(ErrorCode.RESET_TOKEN_INVALID)
-                    .message("Token expired or invalid!");
+                    .message("Token hết hạn hoặc không hợp lệ!");
         return ServiceResult.Success().message("Token hợp lệ");
     }
 
@@ -246,20 +246,20 @@ public class AuthService {
         if (!req.password().equals(req.repassword()))
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("Password mismatch");
+                    .message("Mật khẩu không khớp");
 
         PasswordResetToken pr = prRepo.findByToken(req.token()).orElse(null);
         if (pr == null || pr.getExpiresAt().isBefore(OffsetDateTime.now()))
             return ServiceResult.Failure()
                     .code(ErrorCode.RESET_TOKEN_INVALID)
-                    .message("Token expired or invalid!");
+                    .message("Token hết hạn hoặc không hợp lệ!");
 
         User user = pr.getUser();
         user.setPasswordHash(encoder.encode(req.password()));
         userRepo.save(user);
         prRepo.delete(pr);
 
-        return ServiceResult.Success().message("Password reset successful!");
+        return ServiceResult.Success().message("Đặt lại mật khẩu thành công");
     }
 
     public ServiceResult register(RegisterRequest r, String baseUrl) {
@@ -268,10 +268,10 @@ public class AuthService {
         if (!r.password().equals(r.repassword()))
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("Password mismatch");
+                    .message("Mật khẩu không khớp");
 
         Role viewerRole = roleRepo.findByCode("viewer")
-                .orElseThrow(() -> new IllegalStateException("Role 'viewer' not found."));
+                .orElseThrow(() -> new IllegalStateException("Lỗi dữ liệu."));
 
         Optional<User> opt = userRepo.findByEmailIgnoreCase(r.email());
         User user;
@@ -288,7 +288,6 @@ public class AuthService {
             VerificationToken vt = tokenRepo.findByUserId(user.getId()).orElse(null);
             OffsetDateTime now = OffsetDateTime.now();
 
-            /* —— CHẶN gửi lại quá nhanh —— */
             if (vt != null &&              // có token
                     vt.getExpiresAt().isAfter(now) &&               // còn hạn
                     vt.getCreatedAt() != null &&
@@ -349,12 +348,12 @@ public class AuthService {
         if (vt == null)
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("Token invalid");
+                    .message("Token không hợp lệ");
 
         if (vt.getExpiresAt().isBefore(OffsetDateTime.now()))
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("Token expired");
+                    .message("Token hết hạn");
 
         User user = vt.getUser();
         if (Boolean.TRUE.equals(user.isEmailVerified()))
@@ -526,7 +525,7 @@ public class AuthService {
         if (refreshToken == null)
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
-                    .message("Logged out");
+                    .message("Đã đăng xuất");
 
         try {
             DecodedJWT jwtOld = jwtProvider.verify(refreshToken);
@@ -542,7 +541,7 @@ public class AuthService {
         }
         return ServiceResult.Success()
                 .code(ErrorCode.SUCCESS)
-                .message("Revoked token thành công");
+                .message("Thu hồi token thành công");
 
 
 

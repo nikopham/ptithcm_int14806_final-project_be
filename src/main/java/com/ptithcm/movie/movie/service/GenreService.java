@@ -69,13 +69,13 @@ public class GenreService {
 
             return ServiceResult.Success()
                     .code(ErrorCode.SUCCESS)
-                    .message("Search genres successfully")
+                    .message("Tìm kiếm thể loại phim thành công")
                     .data(responsePage);
 
         } catch (Exception e) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Error searching genres: " + e.getMessage());
+                    .message("Lỗi khi tìm kiếm thể loại phim: " + e.getMessage());
         }
     }
 
@@ -144,7 +144,7 @@ public class GenreService {
         if (genreRepository.existsByNameIgnoreCase(request.getName().trim())) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Genre with name '" + request.getName() + "' already exists");
+                    .message("Thể loại phim với tên '" + request.getName() + "' đã tồn tại");
         }
 
         Genre genre = Genre.builder()
@@ -154,41 +154,41 @@ public class GenreService {
         Genre savedGenre = genreRepository.save(genre);
 
         return ServiceResult.Success().code(ErrorCode.SUCCESS)
-                .message("Create genre successfully")
+                .message("Tạo thể loại phim thành công")
                 .data(savedGenre);
     }
 
     @Transactional
     public ServiceResult updateGenre(Integer id, GenreRequest request) {
         Genre genre = genreRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Genre not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thể loại phim"));
 
         String newName = request.getName().trim();
 
         if (genreRepository.existsByNameIgnoreCaseAndIdNot(newName, id)) {
             return ServiceResult.Failure()
                     .code(ErrorCode.FAILED)
-                    .message("Genre name '" + newName + "' is already taken by another genre");
+                    .message("Thể loại phim '" + newName + "' đã tồn tại");
         }
 
         genre.setName(newName);
         Genre updatedGenre = genreRepository.save(genre);
 
         return ServiceResult.Success().code(ErrorCode.SUCCESS)
-                .message("Update genre successfully")
+                .message("Cập nhật thể loại phim thành công")
                 .data(updatedGenre);
     }
 
     @Transactional
     public ServiceResult deleteGenre(Integer id) {
         Genre genre = genreRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Genre not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thể loại phim"));
 
         genreRepository.deleteMovieGenreRelations(id);
 
         genreRepository.delete(genre);
 
         return ServiceResult.Success().code(ErrorCode.SUCCESS)
-                .message("Genre deleted successfully");
+                .message("Xóa thể loại phim thành công");
     }
 }

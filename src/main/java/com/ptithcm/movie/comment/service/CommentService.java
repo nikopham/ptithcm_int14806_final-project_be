@@ -73,7 +73,7 @@ public class CommentService {
                 .build());
 
         return ServiceResult.Success()
-                .message("Get comments successfully")
+                .message("Lấy danh sách bình luận thành công")
                 .data(response);
     }
 
@@ -177,7 +177,7 @@ public class CommentService {
     @Transactional
     public ServiceResult createComment(CommentRequest request) {
         User currentUser = getCurrentUser();
-        if (currentUser == null) return ServiceResult.Failure().code(401).message("Unauthorized");
+        if (currentUser == null) return ServiceResult.Failure().code(401).message("Chưa đăng nhập");
         ToxicCheckResponse aiResult = moderationService.analyzeContent(request.getBody());
         boolean isToxic = aiResult.getIsToxic();
 
@@ -205,18 +205,18 @@ public class CommentService {
 
         if (request.getParentId() != null) {
             MovieComment parent = commentRepository.findById(request.getParentId())
-                    .orElseThrow(() -> new RuntimeException("Parent comment not found"));
+                    .orElseThrow(() -> new RuntimeException("Bình luận đang trả lời không tồn tại"));
 
             if (!parent.getMovie().getId().equals(movie.getId())) {
-                return ServiceResult.Failure().code(400).message("Parent comment belongs to another movie");
+                return ServiceResult.Failure().code(400).message("Bình luận đang trả lời không hợp lệ");
             }
 
             if (request.getParentId() != null) {
                 MovieComment parentNode = commentRepository.findById(request.getParentId())
-                        .orElseThrow(() -> new RuntimeException("Parent comment not found"));
+                        .orElseThrow(() -> new RuntimeException("Bình luận đang trả lời không tồn tại"));
 
                 if (!parentNode.getMovie().getId().equals(movie.getId())) {
-                    return ServiceResult.Failure().code(400).message("Invalid parent comment");
+                    return ServiceResult.Failure().code(400).message("Bình luận đang trả lời không hợp lệ");
                 }
 
                 if (parentNode.getParent() == null) {
@@ -242,20 +242,20 @@ public class CommentService {
 
         }
         return ServiceResult.Success()
-                .message("Comment posted successfully")
+                .message("Tạo bình luận thành công")
                 .data(mapToCommentResponse(savedComment));
     }
 
     @Transactional
     public ServiceResult editComment(UUID commentId, CommentRequest request) {
         User currentUser = getCurrentUser();
-        if (currentUser == null) return ServiceResult.Failure().code(401).message("Unauthorized");
+        if (currentUser == null) return ServiceResult.Failure().code(401).message("Chưa đăng nhập");
 
         MovieComment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new RuntimeException("Comment not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bình luận"));
 
         if (!comment.getUser().getId().equals(currentUser.getId())) {
-            return ServiceResult.Failure().code(403).message("You can only edit your own comment");
+            return ServiceResult.Failure().code(403).message("Bạn chỉ có thể chỉnh sửa bình luận của chính mình");
         }
 
         comment.setBody(request.getBody());
@@ -264,7 +264,7 @@ public class CommentService {
         MovieComment updatedComment = commentRepository.save(comment);
 
         return ServiceResult.Success()
-                .message("Comment updated successfully")
+                .message("Câp nhật bình luận thành công")
                 .data(mapToCommentResponse(updatedComment));
     }
 
@@ -272,17 +272,17 @@ public class CommentService {
     @Transactional
     public ServiceResult toggleHidden(UUID commentId) {
         User currentUser = getCurrentUser();
-        if (currentUser == null) return ServiceResult.Failure().code(ErrorCode.UNAUTHORIZED).message("Unauthorized");
+        if (currentUser == null) return ServiceResult.Failure().code(ErrorCode.UNAUTHORIZED).message("Chưa đăng nhập");
 
         MovieComment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new RuntimeException("Comment not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bình luận"));
 
         boolean isOwner = comment.getUser().getId().equals(currentUser.getId());
         Role role = currentUser.getRole();
         boolean isAdmin = role != null && (role.getCode().equals("super_admin") || role.getCode().equals("comment_admin"));
 
         if (!isOwner && !isAdmin) {
-            return ServiceResult.Failure().code(ErrorCode.FORBIDDEN).message("You don't have permission to toggle this comment");
+            return ServiceResult.Failure().code(ErrorCode.FORBIDDEN).message("Bạn không có quyền thay đổi trạng thái bình luận này");
         }
 
         comment.setHidden(!comment.isHidden());
@@ -292,7 +292,7 @@ public class CommentService {
         data.put("id", comment.getId());
         data.put("isHidden", comment.isHidden());
 
-        return ServiceResult.Success().message("Toggled hidden state").data(data);
+        return ServiceResult.Success().message("Cập nhật trạng thái bình luận").data(data);
     }
 
     private CommentResponse mapToCommentResponse(MovieComment c) {

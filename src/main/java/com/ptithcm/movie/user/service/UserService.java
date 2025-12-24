@@ -47,18 +47,18 @@ public class UserService {
     public ServiceResult createAdmin(CreateAdminRequest request) {
 
         if (userRepo.existsByEmailIgnoreCase(request.getEmail())) {
-            return ServiceResult.Failure().code(400).message("Email already exists");
+            return ServiceResult.Failure().code(400).message("Email đã tồn tại");
         }
 
         Role role = roleRepository.findByCode(request.getRoleCode())
-                .orElseThrow(() -> new RuntimeException("Role not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò"));
 
         String avatarUrl = null;
         if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
             try {
                 avatarUrl = cloudinaryService.uploadImage(request.getAvatar());
             } catch (IOException e) {
-                return ServiceResult.Failure().code(500).message("Failed to upload avatar");
+                return ServiceResult.Failure().code(500).message("Lỗi khi tải ảnh lên");
             }
         }
 
@@ -88,7 +88,7 @@ public class UserService {
 
         return ServiceResult.Success()
                 .code(ErrorCode.SUCCESS)
-                .message("Admin created successfully")
+                .message("Tạo admin thành công")
                 .data(response);
     }
 
@@ -112,13 +112,13 @@ public class UserService {
     @Transactional
     public ServiceResult updateProfile(UUID userId, UserUpdateRequest request) {
         User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         if (StringUtils.hasText(request.getUsername())) {
             String newUsername = request.getUsername().trim();
 
             if (userRepo.existsByUsernameAndIdNot(newUsername, userId)) {
-                return ServiceResult.Failure().code(ErrorCode.FAILED).message("Username is already taken");
+                return ServiceResult.Failure().code(ErrorCode.FAILED).message("Username đã tồn tại");
             }
             user.setUsername(newUsername);
         }
@@ -128,37 +128,37 @@ public class UserService {
                 String avatarUrl = cloudinaryService.uploadImage(request.getAvatar());
                 user.setAvatarUrl(avatarUrl);
             } catch (IOException e) {
-                return ServiceResult.Failure().code(ErrorCode.FAILED).message("Error uploading avatar");
+                return ServiceResult.Failure().code(ErrorCode.FAILED).message("Lỗi khi tải ảnh lên");
             }
         }
 
         User updatedUser = userRepo.save(user);
-        return ServiceResult.Success().code(ErrorCode.SUCCESS).data(updatedUser).message("Profile updated successfully");
+        return ServiceResult.Success().code(ErrorCode.SUCCESS).data(updatedUser).message("Cập nhật ảnh hồ sơ thành công");
     }
 
     @Transactional
     public ServiceResult changePassword(UUID userId, ChangePasswordRequest request) {
         User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
-            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Incorrect old password");
+            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Mật khẩu cũ không đúng");
         }
 
         if (request.getOldPassword().equals(request.getNewPassword())) {
-            return ServiceResult.Failure().code(ErrorCode.FAILED).message("New password cannot be the same as old password");
+            return ServiceResult.Failure().code(ErrorCode.FAILED).message("Mật khẩu mới phải khác mật khẩu cũ");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepo.save(user);
 
-        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Password changed successfully");
+        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Đổi mật khẩu thành công");
     }
 
     @Transactional
     public ServiceResult updateUserStatus(UUID id, UserStatusRequest request) {
         User user = userRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         user.setActive(request.getActive());
         User savedUser = userRepo.save(user);
@@ -220,7 +220,7 @@ public class UserService {
                 .build());
 
         return ServiceResult.Success()
-                .message("Search viewers successfully")
+                .message("Tìm kiếm người xem thành công")
                 .data(responsePage);
     }
 
@@ -289,7 +289,7 @@ public class UserService {
                 .build());
 
         return ServiceResult.Success()
-                .message("Search admins successfully")
+                .message("Tìm kiếm admin thành công")
                 .data(responsePage);
     }
 
@@ -336,7 +336,7 @@ public class UserService {
                 if (userRepo.existsByEmailAndIdNot(newEmail, id)) {
                     return ServiceResult.Failure()
                             .code(ErrorCode.BAD_CREDENTIALS)
-                            .message("Email '" + newEmail + "' is already taken by another user");
+                            .message("Email '" + newEmail + "' đã được sử dụng bởi người dùng khác");
                 }
                 user.setEmail(newEmail);
             }
@@ -352,13 +352,13 @@ public class UserService {
                 String newAvatarUrl = cloudinaryService.uploadImage(request.getAvatar());
                 user.setAvatarUrl(newAvatarUrl);
             } catch (IOException e) {
-                return ServiceResult.Failure().message("Failed to upload avatar");
+                return ServiceResult.Failure().message("Lỗi khi tải ảnh lên");
             }
         }
 
         if (request.getRoleCode() != null) {
             Role newRole = roleRepository.findByCode(request.getRoleCode())
-                    .orElseThrow(() -> new RuntimeException("Role not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò"));
             user.setRole(newRole);
         }
 
@@ -379,31 +379,31 @@ public class UserService {
                 .createdAt(savedUser.getCreatedAt())
                 .build();
 
-        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Admin updated successfully").data(response);
+        return ServiceResult.Success().code(ErrorCode.SUCCESS).message("Cập nhật admin thành công").data(response);
     }
 
     @Transactional
     public ServiceResult resetAdminPassword(UUID id, String newPassword) {
         User user = userRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
 
         userRepo.save(user);
 
         return ServiceResult.Success()
-                .message("Password reset successfully");
+                .message("Đặt lại mật khẩu thành công");
     }
 
     @Transactional
     public ServiceResult deleteAdmin(UUID adminId, UserPrincipal userPrincipal) {
         User admin = userRepo.findById(adminId)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy admin"));
 
         if (GlobalConstant.SUPER_ADMIN.equals(admin.getRole().getCode())) {
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("Cannot delete SUPER_ADMIN account");
+                    .message("Không thể xóa SUPER_ADMIN");
         }
 
         ServiceResult result = getCurrentUser(userPrincipal);
@@ -412,25 +412,25 @@ public class UserService {
         if (u.getId().equals(adminId.toString())) {
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("You cannot delete your own account");
+                    .message("Bạn không thể xóa chính mình");
         }
 
         if (movieRepository.existsByCreatedBy_Id(adminId)) {
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("Cannot delete this admin. They have created movies. Please deactivate instead.");
+                    .message("Thông tin này không thể bị xóa. Họ đã tạo phim. Vui lòng vô hiệu hóa.");
         }
 
         if (movieRepository.existsByUpdatedBy_Id(adminId)) {
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("Cannot delete this admin. They have updated movies. Please deactivate instead.");
+                    .message("Thông tin này không thể bị xóa. Họ đã cập nhật phim. Vui lòng vô hiệu hóa.");
         }
 
         if (commentRepository.existsByUser_Id(adminId)) {
             return ServiceResult.Failure()
                     .code(ErrorCode.BAD_CREDENTIALS)
-                    .message("Cannot delete this admin. They have posted comments.");
+                    .message("Không thể xóa admin này. Họ đã bình luận về phim. Vui lòng vô hiệu hóa.");
         }
 
         if (admin.getAvatarUrl() != null) {
@@ -439,16 +439,16 @@ public class UserService {
 
         userRepo.delete(admin);
 
-        return ServiceResult.Success().message("Admin deleted successfully");
+        return ServiceResult.Success().message("Xóa admin thành công");
     }
 
     @Transactional
     public ServiceResult updateUserProfile(UserProfileUpdateRequest request) {
         User currentUser = userRepo.findById(request.getId())
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
 
         if(currentUser.getId() == null){
-            return ServiceResult.Failure().code(ErrorCode.BAD_CREDENTIALS).message("Can't find user");
+            return ServiceResult.Failure().code(ErrorCode.BAD_CREDENTIALS).message("Không tìm thấy user");
         }
 
 
@@ -457,7 +457,7 @@ public class UserService {
                 String avatarUrl = cloudinaryService.uploadImage(request.getAvatar());
                 currentUser.setAvatarUrl(avatarUrl);
             } catch (IOException e) {
-                return ServiceResult.Failure().message("Failed to upload avatar");
+                return ServiceResult.Failure().message("Lôi khi tải ảnh lên");
             }
         }
         currentUser.setUsername(request.getUsername());
@@ -476,30 +476,30 @@ public class UserService {
                 .build();
 
         return ServiceResult.Success()
-                .message("Profile updated successfully")
+                .message("Cập nhật hồ sơ thành công")
                 .data(response);
     }
 
     @Transactional
     public ServiceResult changePasswordUserProfile(ChangePasswordProfileRequest request) {
         User currentUser = userRepo.findById(request.getId())
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
 
         if(currentUser.getId() == null){
-            return ServiceResult.Failure().code(ErrorCode.BAD_CREDENTIALS).message("Can't find user");
+            return ServiceResult.Failure().code(ErrorCode.BAD_CREDENTIALS).message("Không tìm thấy user");
         }
 
         if ( currentUser.getPasswordHash() != null && !passwordEncoder.matches(request.getCurrentPw(), currentUser.getPasswordHash())) {
-            return ServiceResult.Failure().code(400).message("Incorrect current password");
+            return ServiceResult.Failure().code(400).message("Sai mật khẩu hiện tại");
         }
 
         if (request.getCurrentPw().equals(request.getNewPw())) {
-            return ServiceResult.Failure().code(400).message("New password must be different from current password");
+            return ServiceResult.Failure().code(400).message("Mật khẩu mới phải khác mật khẩu hiện tại");
         }
 
         currentUser.setPasswordHash(passwordEncoder.encode(request.getNewPw()));
         userRepo.save(currentUser);
 
-        return ServiceResult.Success().message("Password changed successfully");
+        return ServiceResult.Success().message("Đổi mật khẩu thành công");
     }
 }

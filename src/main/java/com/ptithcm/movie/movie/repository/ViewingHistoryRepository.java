@@ -27,30 +27,43 @@ public interface ViewingHistoryRepository extends JpaRepository<ViewingHistory, 
     Optional<ViewingHistory> findTopByUserIdOrderByLastWatchedAtDesc(UUID userId);
 
     @Query(value = """
+    SELECT 
+        CAST(user_id AS VARCHAR) as userId, 
+        CAST(movie_id AS VARCHAR) as movieId, 
+        AVG(rating) as finalRating
+    FROM (
+        -- 1. DỮ LIỆU TỪ LỊCH SỬ XEM (Implicit Feedback)
         SELECT 
-            CAST(user_id AS VARCHAR) as userId, 
-            CAST(movie_id AS VARCHAR) as movieId, 
-            MAX(rating) as finalRating 
-        FROM (
-            -- 1. DỮ LIỆU TỪ LỊCH SỬ XEM (Implicit)
-            SELECT 
-                user_id, movie_id,
-                (CASE 
-                    WHEN (total_seconds > 0 AND (CAST(accumulated_seconds AS FLOAT) / total_seconds) >= 0.8) THEN 4.0
-                    WHEN (total_seconds > 0 AND (CAST(accumulated_seconds AS FLOAT) / total_seconds) >= 0.5) THEN 3.0
-                    WHEN (total_seconds > 0 AND (CAST(accumulated_seconds AS FLOAT) / total_seconds) >= 0.1) THEN 2.0
-                    ELSE 0.0 
-                END) as rating
-            FROM viewing_history
-            WHERE accumulated_seconds > 0
+            user_id, movie_id,
+            (CASE 
+                WHEN (total_seconds > 0 AND (CAST(accumulated_seconds AS FLOAT) / total_seconds) >= 0.8) THEN 4.0
+                WHEN (total_seconds > 0 AND (CAST(accumulated_seconds AS FLOAT) / total_seconds) >= 0.5) THEN 3.0
+                WHEN (total_seconds > 0 AND (CAST(accumulated_seconds AS FLOAT) / total_seconds) >= 0.1) THEN 2.0
+                ELSE 0.0 
+            END) as rating
+        FROM viewing_history
+        WHERE accumulated_seconds > 0
 
-            UNION ALL
+        UNION ALL
 
-            -- 2. DỮ LIỆU TỪ LIKE (Explicit) -> 5 ĐIỂM
-            SELECT user_id, movie_id, 5.0 as rating FROM movie_likes
-        ) as combined
-        GROUP BY user_id, movie_id
-        HAVING MAX(rating) > 0
+        -- 2. DỮ LIỆU TỪ LIKE (Explicit Feedback - Rất thích)
+        -- Like mặc định là 5 điểm
+        SELECT user_id, movie_id, 5.0 as rating FROM movie_likes
+
+        UNION ALL
+
+        -- 3. DỮ LIỆU TỪ REVIEW (Explicit Feedback - Điểm cụ thể)
+        -- Lấy trực tiếp điểm rating người dùng chấm (1.0 - 5.0)
+        SELECT 
+            user_id, 
+            movie_id, 
+            CAST(rating AS FLOAT) as rating 
+        FROM reviews
+        WHERE is_hidden = false -- Chỉ lấy review không bị ẩn
+
+    ) as combined
+    GROUP BY user_id, movie_id
+    HAVING AVG(rating) > 0
     """, nativeQuery = true)
     List<Map<String, Object>> getTrainingData();
 }

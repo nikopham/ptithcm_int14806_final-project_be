@@ -33,6 +33,8 @@ public interface MovieRepository extends JpaRepository<Movie, UUID>, JpaSpecific
 
     List<Movie> findTop10ByOrderByViewCountDesc();
 
+
+
     @Query("SELECT m FROM Movie m " +
             "JOIN m.genres g " +
             "WHERE g.id = :genreId " +
@@ -71,6 +73,8 @@ public interface MovieRepository extends JpaRepository<Movie, UUID>, JpaSpecific
     boolean existsByUpdatedBy_Id(UUID userId);
 
     Optional<Movie> findByVideoUrlContaining(String videoUid);
+
+    Optional<Movie> findMovieByTitleIgnoreCase(String title);
 
     @Query("SELECT DISTINCT m FROM Movie m " +
             "LEFT JOIN m.actors a " +
