@@ -38,14 +38,32 @@ spring:
         jdbc:
           time_zone: Asia/Ho_Chi_Minh
         dialect: org.hibernate.dialect.PostgreSQLDialect
+#  mail:
+#    host: smtp.gmail.com        # ví dụ
+#    port: 587
+#    username: pham5446@gmail.com
+#    password: czulopbcpgnhfpdl
+#    properties:
+#      mail.smtp.auth: true
+#      mail.smtp.starttls.enable: true
   mail:
-    host: smtp.gmail.com        # ví dụ
-    port: 587
+    host: smtp.gmail.com
+    port: 465
+    protocol: smtp
     username: pham5446@gmail.com
     password: czulopbcpgnhfpdl
     properties:
-      mail.smtp.auth: true
-      mail.smtp.starttls.enable: true
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: false
+            required: false
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
   data:
     redis:
       host: metro.proxy.rlwy.net
