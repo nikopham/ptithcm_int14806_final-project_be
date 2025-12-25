@@ -27,7 +27,7 @@ public class AuthController {
     private final JwtConfig jwtConfig;
 
 //    @Value("${app.base-url:http://localhost:8080}")
-    @Value("${app.base-url:https://ptithcmint14806final-projectbe-production.up.railway.app}")
+    @Value("${https://ptithcmint14806final-projectbe-production.up.railway.app}")
     private String baseUrl;
 
     @PostMapping("/register")

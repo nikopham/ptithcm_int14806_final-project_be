@@ -319,6 +319,7 @@ public class AuthService {
             userRepo.save(user);
 
             String link = baseUrl + "/api/auth/verifyRedirect?token=" + vt.getToken();
+            log.info("Verification link: {}", link);
             return mailService.sendRegisterVerification(user, link);
 
         } else {
