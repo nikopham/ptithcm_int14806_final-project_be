@@ -47,20 +47,20 @@ spring:
 #      mail.smtp.auth: true
 #      mail.smtp.starttls.enable: true
   mail:
-    host: smtp.gmail.com
-    port: 465
-    protocol: smtp
-    username: pham5446@gmail.com
-    password: czulopbcpgnhfpdl
+    host: smtp.sendgrid.net
+    port: 587
+    username: apikey
+    password: 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
     properties:
       mail:
         smtp:
           auth: true
-          ssl:
-            enable: true
           starttls:
-            enable: false
-            required: false
+            enable: true
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
   data:
     redis:
       host: metro.proxy.rlwy.net
