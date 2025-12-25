@@ -14,7 +14,7 @@ public class ContentModerationService {
     private final RestTemplate restTemplate = new RestTemplate();
 
 //    private final String AI_URL = "http://localhost:5000/toxic/predict";
-    private final String AI_URL = "https://ptithcm_int14806_final-project_ai.railway.internal/toxic/predict";
+    private final String AI_URL = "http://ptithcm_int14806_final-project_ai.railway.internal:8080/toxic/predict";
 
     public ToxicCheckResponse analyzeContent(String content) {
         try {

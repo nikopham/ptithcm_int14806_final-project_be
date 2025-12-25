@@ -33,7 +33,7 @@ public class RecommendationScheduler {
         // 3. Gửi sang Python
         try {
 //            restTemplate.postForEntity("http://localhost:5000/movie/train", Map.of("data", data), Void.class);
-            restTemplate.postForEntity("https://ptithcm_int14806_final-project_ai.railway.internal/movie/train", Map.of("data", data), Void.class);
+            restTemplate.postForEntity("http://ptithcm_int14806_final-project_ai.railway.internal:8080/movie/train", Map.of("data", data), Void.class);
 
             log.info("✅ Training thành công!");
         } catch (Exception e) {
