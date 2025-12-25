@@ -38,29 +38,17 @@ spring:
         jdbc:
           time_zone: Asia/Ho_Chi_Minh
         dialect: org.hibernate.dialect.PostgreSQLDialect
-#  mail:
-#    host: smtp.gmail.com        # ví dụ
-#    port: 587
-#    username: pham5446@gmail.com
-#    password: czulopbcpgnhfpdl
-#    properties:
-#      mail.smtp.auth: true
-#      mail.smtp.starttls.enable: true
   mail:
-    host: smtp.sendgrid.net
-    port: 2525
-    username: apikey
-    password: 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
+    host: smtp.gmail.com        # ví dụ
+    port: 587
+    username: pham5446@gmail.com
+    password: czulopbcpgnhfpdl
     properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          connectiontimeout: 10000
-          timeout: 10000
-          writetimeout: 10000
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  sendgrid:
+    api-key: ${SENDGRID_API_KEY}
+    from-email: hieupham.niko@gmail.com
   data:
     redis:
       host: metro.proxy.rlwy.net
