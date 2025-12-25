@@ -59,7 +59,7 @@ public class AuthController {
                 .secure(jwtConfig.isCookieSecure())
                 .path("/")
                 .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin()))
-                .sameSite("Lax")
+                .sameSite("None")
                 .build();
 
         ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginData.getRefreshToken())
@@ -67,7 +67,7 @@ public class AuthController {
                 .secure(jwtConfig.isCookieSecure())
                 .path("/api/auth/refresh")
                 .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
-                .sameSite("Lax")
+                .sameSite("None")
                 .build();
 
         authResponse.setAccessToken("");
@@ -100,7 +100,7 @@ public class AuthController {
                 .secure(jwtConfig.isCookieSecure())
                 .path("/")
                 .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin()))
-                .sameSite("Lax")
+                .sameSite("None")
                 .build();
 
         ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginData.getRefreshToken())
@@ -108,7 +108,7 @@ public class AuthController {
             .secure(jwtConfig.isCookieSecure())
             .path("/api/auth/refresh")
             .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
-            .sameSite("Lax")
+            .sameSite("None")
             .build();
 
         authResponse.setAccessToken("");
@@ -137,7 +137,7 @@ public class AuthController {
                 .secure(jwtConfig.isCookieSecure())
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
+                .sameSite("None")
                 .build();
 
         /* dọn cookie refresh_token */
@@ -145,7 +145,7 @@ public class AuthController {
                 .httpOnly(true).secure(true)
                 .path("/api/auth/refresh")
                 .maxAge(0)
-                .sameSite("Lax").build();
+                .sameSite("None").build();
 
 
         SecurityContextHolder.clearContext();
@@ -193,7 +193,7 @@ public class AuthController {
                     .secure(jwtConfig.isCookieSecure())
                     .path("/")
                     .maxAge(Duration.ofDays(jwtConfig.getAccessTtlMin()))
-                    .sameSite("Lax")
+                    .sameSite("None")
                     .build();
 
             ResponseCookie cookie = ResponseCookie.from(jwtConfig.getRefreshCookie(), loginResult.getRefreshToken())
@@ -201,7 +201,7 @@ public class AuthController {
                     .secure(jwtConfig.isCookieSecure())
                     .path("/api/auth/refresh")
                     .maxAge(Duration.ofDays(jwtConfig.getRefreshTtlDay()))
-                    .sameSite("Lax")
+                    .sameSite("None")
                     .build();
 
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

@@ -39,7 +39,7 @@ public class RecommendationService {
         Set<UUID> finalIds = new LinkedHashSet<>();
 
         try {
-            List<String> allIds = movieRepo.findAllIds().stream().map(UUID::toString).toList();
+            List<String> allIds = movieRepo.findAllIdsNotDraft().stream().map(UUID::toString).toList();
             Map<String, Object> body = Map.of("userId", userId.toString(), "allMovieIds", allIds);
 
             ResponseEntity<Map> res = restTemplate.postForEntity("http://localhost:5000/movie/recommend", body, Map.class);
@@ -118,14 +118,19 @@ public class RecommendationService {
      * Output ví dụ: "(genres = 'Action' OR genres = 'Drama') AND id != '123-abc'"
      */
     private String buildMeiliFilter(List<String> genreNames, String excludeId) {
-        if (genreNames.isEmpty()) return "id != '" + excludeId + "'";
+        String baseCondition = "id != '" + excludeId + "' AND status != 'DRAFT'";
+
+        if (genreNames.isEmpty()) {
+            return baseCondition;
+        }
 
         String genreCondition = genreNames.stream()
                 .map(g -> "genres = '" + g + "'") // Cú pháp filter của MeiliSearch
                 .collect(Collectors.joining(" OR "));
 
-        return "(" + genreCondition + ") AND id != '" + excludeId + "'";
+        return "(" + genreCondition + ") AND " + baseCondition;
     }
+
 
     private MovieShortResponse mapToDto(Movie movie) {
         if (movie == null) return null;

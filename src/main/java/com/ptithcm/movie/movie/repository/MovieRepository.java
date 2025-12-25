@@ -28,8 +28,8 @@ public interface MovieRepository extends JpaRepository<Movie, UUID>, JpaSpecific
     @Query("UPDATE Movie m SET m.viewCount = COALESCE(m.viewCount, 0) + 1 WHERE m.id = :id")
     void incrementViewCount(@Param("id") UUID id);
 
-    @Query("SELECT m.id FROM Movie m")
-    List<UUID> findAllIds();
+    @Query("SELECT m.id FROM Movie m WHERE m.status <> 'DRAFT'")
+    List<UUID> findAllIdsNotDraft();
 
     List<Movie> findTop10ByOrderByViewCountDesc();
 

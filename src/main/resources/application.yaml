@@ -24,9 +24,9 @@ spring:
       max-file-size: 1500MB
       max-request-size: 1500MB
   datasource:
-    url: jdbc:postgresql://localhost:5433/moviedb
-    username: h1eu
-    password: "password"
+    url: jdbc:postgresql://crossover.proxy.rlwy.net:57456/railway
+    username: postgres
+    password: "okUFuMOjWcqjuLxujsWyglTawZpWefrH"
   jpa:
     hibernate:
       ddl-auto: validate 
@@ -43,8 +43,10 @@ spring:
       mail.smtp.starttls.enable: true
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: metro.proxy.rlwy.net
+      port: 48758
+      username: default
+      password: "WLtYTBZdELvAoWUeYDyhSFYCpTvCvrip"
   session:
     store-type: redis
     redis:
@@ -76,11 +78,11 @@ app:
     refresh-ttl-day: 7
     refresh-cookie: refresh_token
     access_cookie: access_token
-    cookie-secure: false
+    cookie-secure: true
   cors:
     allowed-origins:
       - http://localhost:5173         # Vite dev
-      - https://my-movie-frontend.com
+      - https://ptithcm-int-14806-final-project-43upmrm53.vercel.app/
 
 
 cloudflare:
@@ -92,5 +94,5 @@ cloudflare:
   private-key: "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb2dJQkFBS0NBUUVBclhCS29ONTFienlmQytpc3hIbTN6RVlVYzZDVG1nNzhpa1BDWkdMdmhtZUpCVjJtCllXYnArem5xRTRxNktBeTgwdHZreGdudWM0WkptQjBPM1pwWGxuSzBkdjI5RVIwSzBRdmxrLzBxWVFJcDRSOGsKdWZFSUt2OXhJVGpEaEFzMUl2enJSWHU4RXJOeG1UT280TGNrUW4vU0hlTHRSd0Qvbis5WlE0dG4yMWhHN1k1KwpNSGNFZnRJbENXNU13NlE5V1JCenMrOUN0dFlzYnl1M01MeTZGRjcvUlN2NEVUdTU0dUQwZnNydG4yejkrSUFoCkFaNWxreEdLMnU1RWsySG5uSGVOQnFOc1Fpamk2ZW01MnpmSkg0WG53Q2Nucnd6Yzd2dFVZNXMxdGZoNzRPbEYKWlFWWmphUTFOb3JqNGhBWVRZV0oyb3VzRUc5NmhIYldrQjVlQ3dJREFRQUJBb0lCQUZhd1dzemZoRWtPUHR6Zgo5b0xaNTlGVmNlRjljR2svZG1EUmozZEhzRHM0d3RjSXdTSE1JOFZyWkNGU1pNdWgyanQycDNtSSswT0k2bjM2CmdEU3BjWUFFWTBsYWVFYjJnaktNeExwY2Z2TXY5cWpNUFRvblRKTFpUTDF6TnQ1b0Q2NG1ScDViUTEwQmpoVXEKS2czdjNGTFV1cnd2Y2JQY3Z1Zzg1UndLc09XRC9kMEQvb05vTEJWRWIrbnZ0ME9OVVN1SGNscHA0ZVdwQ1k0dgpMYzVWZllvazF4eWk4dlpoSDhxOElwMlYzUEZja3ZrVThlYnB5UUhTSVFWd014YlgyRGJJOWMzaHp2Y0FwZXV1CklXRlZDcUcwaFFtZE9CSnZ3amIwTGhWWWZYTUhsdWJZeFNnVHVzVkdvWDZXOG1uQkNzWVJtV3RrSGJPWGllczkKZ0hZSFQrRUNnWUVBNCtvZ0cyY0pGQXJ1UUYydUlpZ1QvdDQ1ZUFZRDN1aTZOS1NnUG53QzFSUGI0UUNxT081bgp6ZWU0SllUWHdJOURZL2JoK3JvUUE1d3VXTjBsVjltV01sdFR2am0rTWJ6U1BLT0JPYVBNajV4U2xGVXRzWnI5Ck9TSkpnTmNMUSswZmtTTEMwZ2pwRDIzRXg2eEp5c0JYTGhrOHRtenNtWkZlRHRZbmtGOG96L0VDZ1lFQXdzK20KT0liKzIrMC9TQ21OdDk4cTVGTm1YRHgvSytJMzA4RUJMdGRhUndtckpUSW1EQTdJQnAyNjdOVVRETDd2bGxuOQo2SXFJdzZRUnpsQVZqa0dYZ3FlSVFrRWgvZ3lGQ21wYmZQbzNIeHR3R3lmZkxuS1lHamx5WWdYQk5tMjFBY3RDCk83Mmk1ZjlCMG5SOFdEZTk1Wk9xUnRPT3d1alFCd29hVWp6dkNic0NnWUFVMFRPeGpRMjFPUEplQ3JCM0NqWVoKVjI3a1daaE02ZkRvRWdsWTY3Yk9nNHZYMTFtMDdZR3B1dnFFNHNkYUhUdklpNnBFWG01TUJoM3RtL1ZuT3NhUApQdXc5T2NUM2dnbXA1RDFQYUhpc3ZWaUZsK29laU11TVJtZDBUekFHT2toaDEwejRKand6WHBGVXM1WGg0UU9WCmdGU2RUUUduWFRHOEpTOWo3bTBwNFFLQmdFM2MxT0R2QTlvL0h2WG10ZC94OEtERnZMbk03RDlMOFdoUFVmdTQKMHpwbFlPUkRBUFg4eW5IcWhSVzNyQitDQ1J5YzUyRVVUY2wwUURHbnpKWEpIWmQ1QW5zSXNWOXEvWm5HSEw3OAoreDhSeG1MME1yM0x5NE5meHBuckZ1aDhQTVoweVFvN3Ayb3A5ZEw1LytENmxvbTExVzd0aTdmWGVaMzJxY0tJCjNEbVZBb0dBSDEzZUhuMS8veU9sZUpSNmxpSC84RURzVDVUQ0FHR25VNHlPeGp4S2cvWnBpTmdQaVdmVXQ0L3MKSmh0dXVPWXhXY1lseUJncVpPT3REaktHNndTMDFidVQ3Z1ZHeCs0Zy9JaytqN3ZQNVdFTnIvMlhQeHVXSys3eQpla3p2blRJTlMrVzBuUWxDMTlvNXVBeG05OUgwMVEvbDI0OENIaXVpTHJSN1hpekxzalU9Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg=="
 
 meilisearch:
-  host: http://localhost:7700
-  api-key: f40df06b47f029d32ac2bbd230e5c210a3ab613a
+  host: https://ms-dcfea70dffb9-37223.sgp.meilisearch.io
+  api-key: 955431c581babc6b9e9a55f5dff56095b0993b6a

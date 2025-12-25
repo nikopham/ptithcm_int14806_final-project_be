@@ -43,7 +43,7 @@ public class CloudflareService {
         Map<String, Object> data = new HashMap<>();
         data.put("maxDurationSeconds", 14_400);
         data.put("requireSignedURLs", true);
-        data.put("allowedOrigins", List.of("your-movie-website.com", "localhost:5173"));
+        data.put("allowedOrigins", List.of("ptithcm-int-14806-final-project-43upmrm53.vercel.app", "localhost:5173"));
         String webhookUrl = publicUrl + "/api/v1/webhooks/cloudflare";
         data.put("notificationUrl", webhookUrl);
 

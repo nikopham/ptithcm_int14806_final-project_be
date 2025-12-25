@@ -46,7 +46,7 @@ public class SearchService {
             // Config Movies
             Index movies = client.index(INDEX_MOVIES);
             movies.updateSearchableAttributesSettings(new String[]{"title", "originalTitle", "description"});
-            movies.updateFilterableAttributesSettings(new String[]{"genres", "rating", "releaseYear", "isSeries", "status"});
+            movies.updateFilterableAttributesSettings(new String[]{"id", "genres", "rating", "releaseYear", "isSeries", "status"});
             movies.updateSortableAttributesSettings(new String[]{"rating", "releaseYear"});
 
             // Config People

@@ -23,7 +23,7 @@ public class CorsConfig {
      * List tên miền frontend được phép (VD: http://localhost:5173, https://movies.ptithcm.com).
      * Đọc từ application.yaml cấu hình runtime.
      */
-    private List<String> allowedOrigins = List.of("http://localhost:5173");
+    private List<String> allowedOrigins = List.of("http://localhost:5173", "https://ptithcm-int-14806-final-project-43upmrm53.vercel.app");
 
     private List<String> allowedMethods = List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS");
     private List<String> allowedHeaders = List.of(
