@@ -67,8 +67,8 @@ spring:
             client-id: "971013472316-ho7rn2oevnbbc1dfqn31dnhj7emmkaqn.apps.googleusercontent.com"
             client-secret: "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"
             scope: openid, profile, email
-            redirect-uri: "http://localhost:5173"
-#            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+#            redirect-uri: "http://localhost:5173"
+            redirect-uri: "https://ptithcm-int-14806-final-project-fe.vercel.app"
 
         provider:
           # Google: chỉ cần issuer-uri (OIDC discovery)
@@ -87,7 +87,7 @@ app:
   cors:
     allowed-origins:
       - http://localhost:5173         # Vite dev
-      - https://ptithcm-int-14806-final-project-43upmrm53.vercel.app/
+      - https://ptithcm-int-14806-final-project-fe.vercel.app
 
 
 cloudflare:
