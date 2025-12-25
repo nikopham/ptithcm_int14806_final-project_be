@@ -13,7 +13,8 @@ public class ContentModerationService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    private final String AI_URL = "http://localhost:5000/toxic/predict";
+//    private final String AI_URL = "http://localhost:5000/toxic/predict";
+    private final String AI_URL = "https://ptithcmint14806final-projectai-production.up.railway.app/toxic/predict";
 
     public ToxicCheckResponse analyzeContent(String content) {
         try {

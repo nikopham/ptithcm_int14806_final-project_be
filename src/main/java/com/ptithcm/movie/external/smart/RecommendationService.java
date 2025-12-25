@@ -42,7 +42,9 @@ public class RecommendationService {
             List<String> allIds = movieRepo.findAllIdsNotDraft().stream().map(UUID::toString).toList();
             Map<String, Object> body = Map.of("userId", userId.toString(), "allMovieIds", allIds);
 
-            ResponseEntity<Map> res = restTemplate.postForEntity("http://localhost:5000/movie/recommend", body, Map.class);
+//            ResponseEntity<Map> res = restTemplate.postForEntity("http://localhost:5000/movie/recommend", body, Map.class);
+            ResponseEntity<Map> res = restTemplate.postForEntity("https://ptithcmint14806final-projectai-production.up.railway.app/movie/recommend", body, Map.class);
+
             List<String> svdIds = (List<String>) res.getBody().get("movieIds");
 
             svdIds.stream().limit(7).forEach(id -> finalIds.add(UUID.fromString(id)));
