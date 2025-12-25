@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class MovieBackendApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(MovieBackendApplication.class, args);
+        SpringApplication.run(MovieBackendApplication.class, args);
 	}
 
 }

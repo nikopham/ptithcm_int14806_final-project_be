@@ -24,14 +24,19 @@ spring:
       max-file-size: 1500MB
       max-request-size: 1500MB
   datasource:
-    url: jdbc:postgresql://crossover.proxy.rlwy.net:57456/railway
+    url: jdbc:postgresql://crossover.proxy.rlwy.net:57456/railway?currentSchema=public&timezone=Asia/Ho_Chi_Minh
     username: postgres
     password: "okUFuMOjWcqjuLxujsWyglTawZpWefrH"
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+    locale: vi_VN
   jpa:
     hibernate:
       ddl-auto: validate 
     properties:
       hibernate:
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
         dialect: org.hibernate.dialect.PostgreSQLDialect
   mail:
     host: smtp.gmail.com        # ví dụ
