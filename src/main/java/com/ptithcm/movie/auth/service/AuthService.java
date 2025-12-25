@@ -228,7 +228,7 @@ public class AuthService {
 
 //        String link = "http://localhost:5173" + "/reset-password?token=" + pr.getToken();
 
-        String link = "https://ptithcm-int-14806-final-project-43upmrm53.vercel.app" + "/reset-password?token=" + pr.getToken();
+        String link = "https://ptithcm-int-14806-final-project-fe.vercel.app" + "/reset-password?token=" + pr.getToken();
         return mailService.sendPasswordReset(user, link);   // trả ServiceResult luôn
     }
 
@@ -382,13 +382,13 @@ public class AuthService {
         String target;
         if (Boolean.TRUE.equals(result.getSuccess())) {
             // success -> frontend page
-            target = "https://ptithcm-int-14806-final-project-43upmrm53.vercel.app/verify-success?email=" +
+            target = "https://ptithcm-int-14806-final-project-fe.vercel.app/verify-success?email=" +
                     UriUtils.encode((String) result.getData(), StandardCharsets.UTF_8);
 //            target = "http://localhost:5173/verify-success?email=" +
 //                    UriUtils.encode((String) result.getData(), StandardCharsets.UTF_8);
         } else {
             // failure -> show reason
-            target = "https://ptithcm-int-14806-final-project-43upmrm53.vercel.app/verify-fail?msg=" +
+            target = "https://ptithcm-int-14806-final-project-fe.vercel.app/verify-fail?msg=" +
                     UriUtils.encode(result.getMessage(), StandardCharsets.UTF_8);
 //            target = "http://localhost:5173/verify-fail?msg=" +
 //                    UriUtils.encode(result.getMessage(), StandardCharsets.UTF_8);
