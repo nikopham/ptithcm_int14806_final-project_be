@@ -43,7 +43,7 @@ public class RecommendationService {
             Map<String, Object> body = Map.of("userId", userId.toString(), "allMovieIds", allIds);
 
 //            ResponseEntity<Map> res = restTemplate.postForEntity("http://localhost:5000/movie/recommend", body, Map.class);
-            ResponseEntity<Map> res = restTemplate.postForEntity("https://ptithcmint14806final-projectai-production.up.railway.app/movie/recommend", body, Map.class);
+            ResponseEntity<Map> res = restTemplate.postForEntity("https://ptithcm_int14806_final-project_ai.railway.internal/movie/recommend", body, Map.class);
 
             List<String> svdIds = (List<String>) res.getBody().get("movieIds");
 
