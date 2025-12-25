@@ -24,9 +24,12 @@ spring:
       max-file-size: 1500MB
       max-request-size: 1500MB
   datasource:
-    url: jdbc:postgresql://crossover.proxy.rlwy.net:57456/railway?currentSchema=public&timezone=Asia/Ho_Chi_Minh
-    username: postgres
-    password: "okUFuMOjWcqjuLxujsWyglTawZpWefrH"
+#    url: jdbc:postgresql://crossover.proxy.rlwy.net:57456/railway?currentSchema=public&timezone=Asia/Ho_Chi_Minh
+#    username: postgres
+#    password: "okUFuMOjWcqjuLxujsWyglTawZpWefrH"
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}?currentSchema=public&timezone=Asia/Ho_Chi_Minh
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
   jackson:
     time-zone: Asia/Ho_Chi_Minh
     locale: vi_VN
