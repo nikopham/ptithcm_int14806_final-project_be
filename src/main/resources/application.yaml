@@ -61,9 +61,6 @@ spring:
           starttls:
             enable: false
             required: false
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
   data:
     redis:
       host: metro.proxy.rlwy.net
