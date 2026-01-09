@@ -52,7 +52,7 @@ public class RecommendationService {
             log.warn("Python SVD failed: {}", e.getMessage());
         }
 
-        // --- BƯỚC 2: CONTENT-BASED (DÙNG MEILISEARCH) ---
+
         Optional<MovieLike> lastLike = likeRepo.findTopByUserIdOrderByCreatedAtDesc(userId);
         Movie seedMovie = null;
 
@@ -93,15 +93,10 @@ public class RecommendationService {
             }
         }
 
-        // --- BƯỚC 3: TRENDING (Giữ nguyên) ---
         if (finalIds.isEmpty()) {
             return movieRepo.findTop10ByOrderByViewCountDesc().stream().map(this::mapToDto).toList();
         }
-
-
-        if (finalIds.isEmpty()) {
-            return movieRepo.findTop10ByOrderByViewCountDesc().stream().map(this::mapToDto).toList();
-        }
+    
 
         List<Movie> movies = movieRepo.findAllById(finalIds);
 
